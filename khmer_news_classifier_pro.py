@@ -708,24 +708,38 @@ class ClassificationEngine:
         
         return confidence_dict
 
-# Initialize database on startup
-# DatabaseManager.init_database()
+# Initialize session state for the application
+def initialize_app():
+    """Initialize the application state and load models"""
+    # Initialize session state
+    if 'classification_history' not in st.session_state:
+        st.session_state.classification_history = []
+    if 'model_performance' not in st.session_state:
+        st.session_state.model_performance = {}
+    if 'user_preferences' not in st.session_state:
+        st.session_state.user_preferences = {
+            'theme': 'light',
+            'language': 'en',
+            'show_advanced': False
+        }
+    
+    # Load models only once
+    if 'models_loaded' not in st.session_state:
+        try:
+            svm_model, fasttext_model, config = ModelManager.load_models()
+            st.session_state.svm_model = svm_model
+            st.session_state.fasttext_model = fasttext_model
+            st.session_state.config = config
+            st.session_state.classification_engine = ClassificationEngine(
+                svm_model, fasttext_model, config.get("embedding_method", "mean")
+            )
+            st.session_state.models_loaded = True
+        except Exception as e:
+            st.error(f"Failed to initialize models: {e}")
+            st.stop()
 
-# Load models and data
-svm_model, fasttext_model, config = ModelManager.load_models()
-classification_engine = ClassificationEngine(svm_model, fasttext_model, config.get("embedding_method", "mean"))
-
-# Initialize session state
-if 'classification_history' not in st.session_state:
-    st.session_state.classification_history = []
-if 'model_performance' not in st.session_state:
-    st.session_state.model_performance = {}
-if 'user_preferences' not in st.session_state:
-    st.session_state.user_preferences = {
-        'theme': 'light',
-        'language': 'en',
-        'show_advanced': False
-    }
+# Call initialization
+initialize_app()
 
 def extract_pdf_text(pdf_file):
     """Extract text from uploaded PDF file and format into proper sentences and paragraphs"""
