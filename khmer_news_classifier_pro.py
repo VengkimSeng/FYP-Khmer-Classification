@@ -532,10 +532,54 @@ class ModelManager:
                 from gensim.models.fasttext import load_facebook_model
                 fasttext_model = load_facebook_model(Config.FASTTEXT_MODEL_PATH)
                 st.success("✅ FastText model loaded successfully")
+            except ImportError as e:
+                if "triu" in str(e) or "scipy" in str(e):
+                    st.error(f"❌ FastText model loading failed due to scipy compatibility issue: {e}")
+                    st.error("This is likely due to version incompatibility between gensim and scipy.")
+                    
+                    with st.expander("🔧 How to fix this issue", expanded=True):
+                        st.markdown("""
+                        **Option 1: Update dependencies (Recommended)**
+                        ```bash
+                        pip install --upgrade gensim>=4.2.0,<4.4.0 scipy>=1.7.0,<1.11.0
+                        ```
+                        
+                        **Option 2: Reinstall packages**
+                        ```bash
+                        pip uninstall gensim scipy
+                        pip install gensim==4.3.2 scipy==1.10.1
+                        ```
+                        
+                        **Option 3: Alternative FastText loading**
+                        Try using the fasttext library directly:
+                        ```bash
+                        pip install fasttext
+                        ```
+                        """)
+                    
+                    st.info("💡 The application will continue with limited functionality (SVM-only classification)")
+                    fasttext_model = None
+                else:
+                    st.error(f"❌ Error loading FastText model: {e}")
+                    st.error("The model file might be corrupted. Try deleting cc.km.300.bin and restart the application.")
+                    st.stop()
             except Exception as e:
                 st.error(f"❌ Error loading FastText model: {e}")
                 st.error("The model file might be corrupted. Try deleting cc.km.300.bin and restart the application.")
-                st.stop()
+                
+                # Try alternative FastText loading method
+                try:
+                    st.info("🔄 Attempting alternative FastText loading method...")
+                    import fasttext
+                    fasttext_model = fasttext.load_model(Config.FASTTEXT_MODEL_PATH)
+                    st.success("✅ FastText model loaded using alternative method")
+                except ImportError:
+                    st.warning("⚠️ Alternative FastText library not available. Install with: pip install fasttext")
+                    fasttext_model = None
+                except Exception as alt_e:
+                    st.warning(f"⚠️ Alternative loading method also failed: {alt_e}")
+                    st.info("💡 Continuing with SVM-only classification")
+                    fasttext_model = None
             
             # Create or load configuration
             config = ModelManager._get_or_create_config()
@@ -628,6 +672,25 @@ class ClassificationEngine:
     
     def get_sentence_embedding(self, segmented_text: str) -> np.ndarray:
         """Generate sentence embedding from segmented text"""
+        if self.fasttext_model is None:
+            # Fallback to simple TF-IDF-like representation
+            st.warning("⚠️ FastText model not available. Using fallback embedding method.")
+            words = segmented_text.strip().split()
+            if not words:
+                return np.zeros(300)
+            # Simple hash-based embedding as fallback
+            import hashlib
+            embedding = np.zeros(300)
+            for i, word in enumerate(words):
+                word_hash = int(hashlib.md5(word.encode('utf-8')).hexdigest(), 16)
+                idx = word_hash % 300
+                embedding[idx] += 1.0
+            # Normalize
+            norm = np.linalg.norm(embedding)
+            if norm > 0:
+                embedding = embedding / norm
+            return embedding
+            
         words = segmented_text.strip().split()
         if not words:
             return np.zeros(300)
