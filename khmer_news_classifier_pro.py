@@ -16,11 +16,9 @@ License: Academic Research Use
 """
 
 import streamlit as st
-import joblib
 import numpy as np
 import os
 import json
-import PyPDF2
 import time
 import unicodedata 
 import re
@@ -31,6 +29,20 @@ from dataclasses import dataclass
 from enum import Enum
 import hashlib
 from datetime import datetime
+
+# Try to import optional dependencies with error handling
+try:
+    import joblib
+except ImportError:
+    st.error("❌ Missing required package: joblib")
+    st.info("Please install joblib: `pip install joblib`")
+    st.stop()
+
+try:
+    import PyPDF2
+except ImportError:
+    st.warning("⚠️ PyPDF2 not available. PDF upload functionality will be disabled.")
+    PyPDF2 = None
 
 # Import the FastText model downloader
 try:
@@ -743,6 +755,10 @@ initialize_app()
 
 def extract_pdf_text(pdf_file):
     """Extract text from uploaded PDF file and format into proper sentences and paragraphs"""
+    if PyPDF2 is None:
+        st.error("❌ PDF processing is not available. PyPDF2 is not installed.")
+        return None
+        
     try:
         pdf_reader = PyPDF2.PdfReader(pdf_file)
         text = ""
@@ -991,125 +1007,127 @@ def render_single_analysis():
             st.markdown("#### PDF Document Upload")
             st.markdown("*Ideal for analyzing longer articles, research papers, or saved documents*")
             
-            # Create an upload area with custom styling
-            uploaded_file = st.file_uploader(
-                "📁 Choose your PDF file",
-                type=["pdf"],
-                help="Upload PDF files containing Khmer text. Maximum file size: 10MB",
-                label_visibility="collapsed"
-            )
-            
-            if uploaded_file is not None:
-                # File info display
-                file_size = len(uploaded_file.getvalue()) / 1024  # KB
-                st.info(f"📄 **{uploaded_file.name}** ({file_size:.1f} KB)")
-                
-                # Progress bar for extraction
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                
-                try:
-                    status_text.text("🔄 Extracting text from PDF...")
-                    progress_bar.progress(25)
-                    
-                    extracted_text = extract_pdf_text(uploaded_file)
-                    progress_bar.progress(75)
-                    
-                    if extracted_text:
-                        text_input = extracted_text
-                        progress_bar.progress(100)
-                        status_text.empty()
-                        progress_bar.empty()
-                        
-                        # Success notification
-                        st.success(f"✅ Successfully extracted {len(extracted_text):,} characters!")
-                        
-                        # PDF analysis results
-                        st.markdown("##### 📊 Document Analysis")
-                        
-                        # Create metrics layout
-                        pdf_col1, pdf_col2, pdf_col3 = st.columns(3)
-                        
-                        with pdf_col1:
-                            st.metric("📁 File Size", f"{file_size:.1f} KB")
-                        
-                        with pdf_col2:
-                            word_count = len(extracted_text.split())
-                            st.metric("🔤 Words", f"{word_count:,}")
-
-                        with pdf_col3:
-                            st.metric("📝 Characters", f"{len(extracted_text):,}")
-                        
-                        # Document preview with enhanced display
-                        with st.expander("📖 Document Preview", expanded=False):
-                            # Toggle for showing complete document
-                            show_complete = st.toggle("📄 Show Complete Document")
-                            
-                            if show_complete:
-                                # Show complete document in the same field
-                                st.markdown("**Complete Document Content:**")
-                                st.text_area(
-                                    "Full Document:",
-                                    extracted_text,
-                                    height=500,
-                                    disabled=True,
-                                    key="pdf_complete"
-                                )
-                            else:
-                                # Show preview only
-                                preview_length = min(1000, len(extracted_text))
-                                preview_text = extracted_text[:preview_length]
-                                if len(extracted_text) > preview_length:
-                                    preview_text += "\n\n... [Document continues - toggle above to see complete text]"
-                                
-                                st.markdown("**First 1000 characters:**")
-                                st.text_area(
-                                    "Document Preview:",
-                                    preview_text,
-                                    height=500,
-                                    disabled=True,
-                                    key="pdf_preview"
-                                )
-                            
-                            # Popup button for extracted text
-                            col1, col2 = st.columns([1, 1])
-                            with col1:
-                                # Copy to clipboard button
-                                if st.button("📋 Copy Text", type="secondary", use_container_width=True):
-                                    st.code(extracted_text[:500] + "..." if len(extracted_text) > 500 else extracted_text)
-                                    st.success("✅ Text ready to copy!")
-                            
-                            with col2:
-                                # Download button
-                                st.download_button(
-                                    label="💾 Download TXT",
-                                    data=extracted_text,
-                                    file_name=f"extracted_{uploaded_file.name}.txt",
-                                    mime="text/plain",
-                                    use_container_width=True
-                                )
-                    else:
-                        progress_bar.empty()
-                        status_text.empty()
-                        st.error("❌ Failed to extract text from PDF. Please ensure the file contains readable text.")
-                        
-                except Exception as e:
-                    progress_bar.empty()
-                    status_text.empty()
-                    st.error(f"❌ Error processing PDF: {str(e)}")
-            
+            if PyPDF2 is None:
+                st.error("❌ PDF upload is not available.")
+                st.info("To enable PDF upload, install PyPDF2: `pip install PyPDF2`")
             else:
-                # Show upload instructions when no file is selected
-                st.markdown("""
-                <div style="
-                    border: 2px dashed #cccccc;
-                    border-radius: 10px;
-                    padding: 2rem;
-                    text-align: center;
-                    background-color: #f9f9f9;
-                    margin: 1rem 0;
-                ">
-                    <h4 style="color: #666;">📁 Upload Instructions</h4>
+                # Create an upload area with custom styling
+                uploaded_file = st.file_uploader(
+                    "📁 Choose your PDF file",
+                    type=["pdf"],
+                    help="Upload PDF files containing Khmer text. Maximum file size: 10MB",
+                    label_visibility="collapsed"
+                )
+                
+                if uploaded_file is not None:
+                    # File info display
+                    file_size = len(uploaded_file.getvalue()) / 1024  # KB
+                    st.info(f"📄 **{uploaded_file.name}** ({file_size:.1f} KB)")
+                    
+                    # Progress bar for extraction
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    try:
+                        status_text.text("🔄 Extracting text from PDF...")
+                        progress_bar.progress(25)
+                        
+                        extracted_text = extract_pdf_text(uploaded_file)
+                        progress_bar.progress(75)
+                        
+                        if extracted_text:
+                            text_input = extracted_text
+                            progress_bar.progress(100)
+                            status_text.empty()
+                            progress_bar.empty()
+                            
+                            # Success notification
+                            st.success(f"✅ Successfully extracted {len(extracted_text):,} characters!")
+                            
+                            # PDF analysis results
+                            st.markdown("##### 📊 Document Analysis")
+                            pdf_col1, pdf_col2, pdf_col3 = st.columns(3)
+                            
+                            with pdf_col1:
+                                st.metric("📁 File Size", f"{file_size:.1f} KB")
+                            
+                            with pdf_col2:
+                                word_count = len(extracted_text.split())
+                                st.metric("🔤 Words", f"{word_count:,}")
+
+                            with pdf_col3:
+                                st.metric("📝 Characters", f"{len(extracted_text):,}")
+                            
+                            # Document preview with enhanced display
+                            with st.expander("📖 Document Preview", expanded=False):
+                                # Toggle for showing complete document
+                                show_complete = st.toggle("📄 Show Complete Document")
+                                
+                                if show_complete:
+                                    # Show complete document in the same field
+                                    st.markdown("**Complete Document Content:**")
+                                    st.text_area(
+                                        "Full Document:",
+                                        extracted_text,
+                                        height=500,
+                                        disabled=True,
+                                        key="pdf_complete"
+                                    )
+                                else:
+                                    # Show preview only
+                                    preview_length = min(1000, len(extracted_text))
+                                    preview_text = extracted_text[:preview_length]
+                                    if len(extracted_text) > preview_length:
+                                        preview_text += "\n\n... [Document continues - toggle above to see complete text]"
+                                    
+                                    st.markdown("**First 1000 characters:**")
+                                    st.text_area(
+                                        "Document Preview:",
+                                        preview_text,
+                                        height=500,
+                                        disabled=True,
+                                        key="pdf_preview"
+                                    )
+                                
+                                # Popup button for extracted text
+                                col1, col2 = st.columns([1, 1])
+                                with col1:
+                                    # Copy to clipboard button
+                                    if st.button("📋 Copy Text", type="secondary", use_container_width=True):
+                                        st.code(extracted_text[:500] + "..." if len(extracted_text) > 500 else extracted_text)
+                                        st.success("✅ Text ready to copy!")
+                                
+                                with col2:
+                                    # Download button
+                                    st.download_button(
+                                        label="💾 Download TXT",
+                                        data=extracted_text,
+                                        file_name=f"extracted_{uploaded_file.name}.txt",
+                                        mime="text/plain",
+                                        use_container_width=True
+                                    )
+                        else:
+                            progress_bar.empty()
+                            status_text.empty()
+                            st.error("❌ Failed to extract text from PDF. Please ensure the file contains readable text.")
+                            
+                    except Exception as e:
+                        progress_bar.empty()
+                        status_text.empty()
+                        st.error(f"❌ Error processing PDF: {str(e)}")
+                
+                else:
+                    # Show upload instructions when no file is selected
+                    st.markdown("""
+                    <div style="
+                        border: 2px dashed #cccccc;
+                        border-radius: 10px;
+                        padding: 2rem;
+                        text-align: center;
+                        background-color: #f9f9f9;
+                        margin: 1rem 0;
+                    ">
+                        <h4 style="color: #666;">📁 Upload Instructions</h4>
                     <p style="color: #888; margin: 0.5rem 0;">
                         • Supported format: PDF files only<br>
                         • Maximum file size: 10MB<br>
@@ -1124,7 +1142,7 @@ def render_single_analysis():
             if st.button("🚀 Analyze Text", type="primary", use_container_width=True):
                 # Store result in session state to display in output column
                 with st.spinner("Analyzing..."):
-                    result = classification_engine.classify_text(text_input)
+                    result = st.session_state.classification_engine.classify_text(text_input)
                     st.session_state.classification_history.append(result)
                     st.session_state.current_result = result
                     
@@ -1639,7 +1657,7 @@ def render_session_history():
                 
                 if st.button(f"🔄 Re-analyze", key=f"reanalyze_{result.prediction_id}", use_container_width=True, type="secondary"):
                     with st.spinner("Re-analyzing..."):
-                        new_result = classification_engine.classify_text(result.input_text)
+                        new_result = st.session_state.classification_engine.classify_text(result.input_text)
                         st.session_state.classification_history.append(new_result)
                         st.session_state.current_result = new_result
                     st.success("✅ Re-analyzed! Check results in Classifier tab.")
