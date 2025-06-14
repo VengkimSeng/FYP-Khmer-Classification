@@ -22,7 +22,7 @@ import os
 import json
 import PyPDF2
 import time
-import unicodedata
+import unicodedata 
 import re
 import collections
 from typing import Dict, List, Tuple, Optional, Any
@@ -31,6 +31,18 @@ from dataclasses import dataclass
 from enum import Enum
 import hashlib
 from datetime import datetime
+
+# Import the FastText model downloader
+try:
+    from download_fasttext_model import download_fasttext_model, check_fasttext_model
+except ImportError:
+    # If download_fasttext_model.py is not available, provide fallback
+    def download_fasttext_model(base_dir=None, cleanup=True):
+        st.error("FastText model downloader not available. Please ensure download_fasttext_model.py is in the same directory.")
+        return False
+    
+    def check_fasttext_model(base_dir=None):
+        return os.path.exists(os.path.join(base_dir or ".", "cc.km.300.bin"))
 
 
 
@@ -299,16 +311,17 @@ st.markdown("""
 # Configuration and constants
 class Config:
     """Application configuration constants"""
-    MODEL_DIR = "/root/FYP-Project/FYP-Feature-Extraction/FastText/FastText_Features/experiment_1_mean_pretrained"
-    SVM_MODEL_PATH = os.path.join(MODEL_DIR, "svm_model.joblib")
-    CONFIG_PATH = os.path.join(MODEL_DIR, "config.json")
-    ARTICLES_DIR = "/root/FYP-Project/articles"
-    PREPROCESSED_DIR = "/root/FYP-Project/Preprocess_articles"
-    
+
+    MODEL_DIR = "./"
+    DEMO_MODEL_DIR = "./Demo_model/"
+    SVM_MODEL_PATH = os.path.join(DEMO_MODEL_DIR, "svm_model.joblib")
+    FASTTEXT_MODEL_PATH = os.path.join(MODEL_DIR, "cc.km.300.bin")
+    CONFIG_PATH = os.path.join(MODEL_DIR, "config.json")  # For model configuration
+
     CATEGORIES = ["economic", "environment", "health", "politic", "sport", "technology"]
     CATEGORY_LABELS = {
         "economic": "Economic & Finance",
-        "environment": "Environment & Nature", 
+        "environment": "Environment & Nature",
         "health": "Health & Medical",
         "politic": "Politics & Government",
         "sport": "Sports & Recreation",
@@ -456,15 +469,100 @@ class ModelManager:
     def load_models():
         """Load SVM model, FastText model, and configuration"""
         try:
+            # Check if SVM model exists
+            if not os.path.exists(Config.SVM_MODEL_PATH):
+                st.error(f"SVM model not found at: {Config.SVM_MODEL_PATH}")
+                st.error("Please ensure the trained SVM model is available.")
+                st.stop()
+            
+            # Load SVM model
             svm_model = joblib.load(Config.SVM_MODEL_PATH)
-            with open(Config.CONFIG_PATH, "r") as f:
-                config = json.load(f)
-            from gensim.models.fasttext import load_facebook_model
-            fasttext_model = load_facebook_model(config["model_path"])
+            st.success("✅ SVM model loaded successfully")
+            
+            # Check if FastText model exists, download if needed
+            if not check_fasttext_model(Config.MODEL_DIR):
+                st.warning("⚠️ FastText model not found. Starting download...")
+                
+                # Create a progress container
+                progress_container = st.container()
+                with progress_container:
+                    st.info("📥 Downloading FastText Khmer model (cc.km.300.bin)")
+                    st.info("⏳ This is a one-time download of ~2.8GB. Please be patient...")
+                    
+                    # Show progress bar
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    def progress_callback(downloaded, total):
+                        if total > 0:
+                            progress = downloaded / total
+                            progress_bar.progress(progress)
+                            mb_downloaded = downloaded / (1024 * 1024)
+                            mb_total = total / (1024 * 1024)
+                            status_text.text(f"Downloaded: {mb_downloaded:.1f}MB / {mb_total:.1f}MB ({progress*100:.1f}%)")
+                    
+                    # Download the model
+                    download_success = download_fasttext_model(
+                        base_dir=Config.MODEL_DIR,
+                        cleanup=True
+                    )
+                    
+                    if not download_success:
+                        st.error("❌ Failed to download FastText model. Please check your internet connection and try again.")
+                        st.stop()
+                    
+                    progress_bar.progress(1.0)
+                    status_text.text("✅ Download and extraction completed!")
+                    st.success("🎉 FastText model downloaded successfully!")
+            
+            # Load FastText model
+            try:
+                from gensim.models.fasttext import load_facebook_model
+                fasttext_model = load_facebook_model(Config.FASTTEXT_MODEL_PATH)
+                st.success("✅ FastText model loaded successfully")
+            except Exception as e:
+                st.error(f"❌ Error loading FastText model: {e}")
+                st.error("The model file might be corrupted. Try deleting cc.km.300.bin and restart the application.")
+                st.stop()
+            
+            # Create or load configuration
+            config = ModelManager._get_or_create_config()
+            
             return svm_model, fasttext_model, config
+            
         except Exception as e:
             st.error(f"Error loading models: {e}")
             st.stop()
+    
+    @staticmethod
+    def _get_or_create_config():
+        """Get existing configuration or create default one"""
+        try:
+            if os.path.exists(Config.CONFIG_PATH):
+                with open(Config.CONFIG_PATH, "r") as f:
+                    config = json.load(f)
+            else:
+                # Create default configuration
+                config = {
+                    "model_path": Config.FASTTEXT_MODEL_PATH,
+                    "embedding_method": "mean",
+                    "model_version": "2.0.0",
+                    "last_updated": datetime.now().isoformat()
+                }
+                # Save default configuration
+                with open(Config.CONFIG_PATH, "w") as f:
+                    json.dump(config, f, indent=2)
+                st.info("📝 Created default configuration file")
+            
+            return config
+            
+        except Exception as e:
+            # Return minimal working configuration
+            st.warning(f"⚠️ Could not load/create config file: {e}")
+            return {
+                "model_path": Config.FASTTEXT_MODEL_PATH,
+                "embedding_method": "mean"
+            }
 
 class AnalyticsEngine:
     """Advanced analytics and visualization engine"""
