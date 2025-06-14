@@ -30,41 +30,21 @@ from enum import Enum
 import hashlib
 from datetime import datetime
 
-# Check and handle missing dependencies
-missing_packages = []
-
+# Try to import optional dependencies with error handling
 try:
     import joblib
 except ImportError:
-    missing_packages.append("joblib")
-    joblib = None
+    st.error("❌ Missing required package: joblib")
+    st.info("Please install joblib: `pip install joblib`")
+    st.stop()
 
 try:
     import PyPDF2
 except ImportError:
-    missing_packages.append("PyPDF2")
+    st.warning("⚠️ PyPDF2 not available. PDF upload functionality will be disabled.")
     PyPDF2 = None
 
-# Show error for critical missing packages
-if missing_packages:
-    st.error("❌ **Missing Required Packages**")
-    st.markdown("The following packages are required but not installed:")
-    for pkg in missing_packages:
-        st.code(f"pip install {pkg}")
-    
-    if "joblib" in missing_packages:
-        st.error("**joblib** is critical for model loading. The application cannot function without it.")
-        st.markdown("""
-        **To fix this issue:**
-        1. Install the missing packages using the commands above
-        2. Or create a `requirements.txt` file with the necessary dependencies
-        3. If using Streamlit Cloud, ensure your `requirements.txt` is in the repository root
-        """)
-        st.stop()
-    else:
-        st.warning("Some optional features may not be available due to missing packages.")
-
-# Import the FastText model downloader and demo classifier
+# Import the FastText model downloader
 try:
     from download_fasttext_model import download_fasttext_model, check_fasttext_model
 except ImportError:
@@ -75,11 +55,6 @@ except ImportError:
     
     def check_fasttext_model(base_dir=None):
         return os.path.exists(os.path.join(base_dir or ".", "cc.km.300.bin"))
-
-try:
-    from demo_classifier import DemoClassifier
-except ImportError:
-    DemoClassifier = None
 
 
 
@@ -373,7 +348,7 @@ class Config:
     KHNUMBER = set(u'០១២៣៤៥៦៧៨៩')
     ARABIC_NUMBER = set('0123456789')
     LATIN_CHARS = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
-    PUNCTUATION = set('"!@#$%^&*()-_+=[]{};\'\"|,.<>?/`~፡.,፣;፤፥፦፧፪፠፨')
+    PUNCTUATION = set('"!@#$%^&*()-_+=[]{};\'\"\|,.<>?/`~፡.,፣;፤፥፦፧፪፠፨')
 
 class CategoryType(Enum):
     """Enumeration for news categories"""
@@ -508,15 +483,8 @@ class ModelManager:
         try:
             # Check if SVM model exists
             if not os.path.exists(Config.SVM_MODEL_PATH):
-                st.error(f"❌ **SVM Model Not Found**")
-                st.markdown(f"Expected location: `{Config.SVM_MODEL_PATH}`")
-                st.markdown("""
-                **Possible solutions:**
-                1. Ensure the `Demo_model/` directory contains `svm_model.joblib`
-                2. Check if the model file was included in your repository
-                3. Verify the file path configuration
-                """)
-                st.info("💡 For demonstration purposes, you can train a new model using the provided notebooks.")
+                st.error(f"SVM model not found at: {Config.SVM_MODEL_PATH}")
+                st.error("Please ensure the trained SVM model is available.")
                 st.stop()
             
             # Load SVM model
@@ -527,31 +495,7 @@ class ModelManager:
             if not check_fasttext_model(Config.MODEL_DIR):
                 st.warning("⚠️ FastText model not found. Starting download...")
                 
-                # Check if we're in a cloud environment
-                if os.environ.get('STREAMLIT_SERVER_HEADLESS') == 'true':
-                    st.error("❌ **FastText Model Download Not Available**")
-                    st.markdown("""
-                    **Running on Streamlit Cloud**: Large model downloads are not supported during runtime.
-                    
-                    **To fix this:**
-                    1. Download the model locally: `wget https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.km.300.bin.gz`
-                    2. Extract it: `gunzip cc.km.300.bin.gz`
-                    3. Add the `cc.km.300.bin` file to your repository (if size permits)
-                    4. Or use Git LFS for large files
-                    
-                    **Alternative:** Use a smaller pre-trained model or implement model-free classification.
-                    """)
-                    
-                    # Offer demo mode as fallback
-                    if DemoClassifier is not None:
-                        st.info("🎭 **Demo Mode Available**")
-                        if st.button("🚀 Continue with Demo Mode", type="primary"):
-                            st.session_state.demo_mode = True
-                            st.rerun()
-                    
-                    st.stop()
-                
-                # Create a progress container for local environments
+                # Create a progress container
                 progress_container = st.container()
                 with progress_container:
                     st.info("📥 Downloading FastText Khmer model (cc.km.300.bin)")

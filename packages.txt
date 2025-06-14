@@ -1,5 +1,0 @@
-# System packages for Streamlit Cloud
-# This file is used to install system-level dependencies
-
-# For better text processing
-build-essential
