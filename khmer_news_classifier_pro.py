@@ -63,7 +63,7 @@ st.set_page_config(
     page_title="Khmer News Classifier",
     page_icon="📰",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # Custom CSS for professional styling
@@ -474,46 +474,64 @@ class TextProcessor:
             return ' ។ '.join(sentences) if sentences else text
 
 class ModelManager:
-    """Manage model loading and caching"""
+    """Manage model loading and caching with memory optimization"""
+    
+    # Class-level cache for models to ensure single loading
+    _model_cache = {}
+    _loading_in_progress = False
     
     @staticmethod
-    @st.cache_resource
+    @st.cache_resource(show_spinner=False)
     def load_models():
-        """Load SVM model, FastText model, and configuration"""
+        """Load SVM model, FastText model, and configuration with memory optimization"""
+        # Prevent concurrent loading
+        if ModelManager._loading_in_progress:
+            st.info("⏳ Models are currently being loaded. Please wait...")
+            return None, None, None
+            
+        ModelManager._loading_in_progress = True
+        
         try:
-            # Check if SVM model exists
-            if not os.path.exists(Config.SVM_MODEL_PATH):
-                st.error(f"SVM model not found at: {Config.SVM_MODEL_PATH}")
-                st.error("Please ensure the trained SVM model is available.")
-                st.stop()
+            # Check cache first
+            if "svm_model" in ModelManager._model_cache and "fasttext_model" in ModelManager._model_cache:
+                st.success("✅ Models loaded from memory cache")
+                return (
+                    ModelManager._model_cache["svm_model"], 
+                    ModelManager._model_cache["fasttext_model"],
+                    ModelManager._model_cache["config"]
+                )
             
-            # Load SVM model
-            svm_model = joblib.load(Config.SVM_MODEL_PATH)
-            st.success("✅ SVM model loaded successfully")
-            
-            # Check if FastText model exists, download if needed
-            if not check_fasttext_model(Config.MODEL_DIR):
-                st.warning("⚠️ FastText model not found. Starting download...")
+            # Show loading progress
+            with st.spinner("🔄 Loading models into memory..."):
+                progress_bar = st.progress(0)
+                status_text = st.empty()
                 
-                # Create a progress container
-                progress_container = st.container()
-                with progress_container:
+                # Step 1: Load SVM model (20% progress)
+                status_text.text("Loading SVM classifier...")
+                progress_bar.progress(0.1)
+                
+                if not os.path.exists(Config.SVM_MODEL_PATH):
+                    st.error(f"SVM model not found at: {Config.SVM_MODEL_PATH}")
+                    st.error("Please ensure the trained SVM model is available.")
+                    st.stop()
+                
+                svm_model = joblib.load(Config.SVM_MODEL_PATH)
+                ModelManager._model_cache["svm_model"] = svm_model
+                progress_bar.progress(0.2)
+                st.success("✅ SVM model loaded into memory")
+                
+                # Step 2: Check FastText model availability (40% progress)
+                status_text.text("Checking FastText model availability...")
+                progress_bar.progress(0.3)
+                
+                if not check_fasttext_model(Config.MODEL_DIR):
+                    st.warning("⚠️ FastText model not found. Starting download...")
+                    
+                    # Download with progress tracking
+                    status_text.text("Downloading FastText model...")
                     st.info("📥 Downloading FastText Khmer model (cc.km.300.bin)")
                     st.info("⏳ This is a one-time download of ~2.8GB. Please be patient...")
                     
-                    # Show progress bar
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
-                    
-                    def progress_callback(downloaded, total):
-                        if total > 0:
-                            progress = downloaded / total
-                            progress_bar.progress(progress)
-                            mb_downloaded = downloaded / (1024 * 1024)
-                            mb_total = total / (1024 * 1024)
-                            status_text.text(f"Downloaded: {mb_downloaded:.1f}MB / {mb_total:.1f}MB ({progress*100:.1f}%)")
-                    
-                    # Download the model
                     download_success = download_fasttext_model(
                         base_dir=Config.MODEL_DIR,
                         cleanup=True
@@ -521,74 +539,146 @@ class ModelManager:
                     
                     if not download_success:
                         st.error("❌ Failed to download FastText model. Please check your internet connection and try again.")
+                        ModelManager._loading_in_progress = False
                         st.stop()
                     
-                    progress_bar.progress(1.0)
-                    status_text.text("✅ Download and extraction completed!")
                     st.success("🎉 FastText model downloaded successfully!")
-            
-            # Load FastText model
-            try:
-                from gensim.models.fasttext import load_facebook_model
-                fasttext_model = load_facebook_model(Config.FASTTEXT_MODEL_PATH)
-                st.success("✅ FastText model loaded successfully")
-            except ImportError as e:
-                if "triu" in str(e) or "scipy" in str(e):
-                    st.error(f"❌ FastText model loading failed due to scipy compatibility issue: {e}")
-                    st.error("This is likely due to version incompatibility between gensim and scipy.")
-                    
-                    with st.expander("🔧 How to fix this issue", expanded=True):
-                        st.markdown("""
-                        **Option 1: Update dependencies (Recommended)**
-                        ```bash
-                        pip install --upgrade gensim>=4.2.0,<4.4.0 scipy>=1.7.0,<1.11.0
-                        ```
-                        
-                        **Option 2: Reinstall packages**
-                        ```bash
-                        pip uninstall gensim scipy
-                        pip install gensim==4.3.2 scipy==1.10.1
-                        ```
-                        
-                        **Option 3: Alternative FastText loading**
-                        Try using the fasttext library directly:
-                        ```bash
-                        pip install fasttext
-                        ```
-                        """)
-                    
-                    st.info("💡 The application will continue with limited functionality (SVM-only classification)")
-                    fasttext_model = None
-                else:
-                    st.error(f"❌ Error loading FastText model: {e}")
-                    st.error("The model file might be corrupted. Try deleting cc.km.300.bin and restart the application.")
-                    st.stop()
-            except Exception as e:
-                st.error(f"❌ Error loading FastText model: {e}")
-                st.error("The model file might be corrupted. Try deleting cc.km.300.bin and restart the application.")
                 
-                # Try alternative FastText loading method
-                try:
-                    st.info("🔄 Attempting alternative FastText loading method...")
-                    import fasttext
-                    fasttext_model = fasttext.load_model(Config.FASTTEXT_MODEL_PATH)
-                    st.success("✅ FastText model loaded using alternative method")
-                except ImportError:
-                    st.warning("⚠️ Alternative FastText library not available. Install with: pip install fasttext")
-                    fasttext_model = None
-                except Exception as alt_e:
-                    st.warning(f"⚠️ Alternative loading method also failed: {alt_e}")
+                progress_bar.progress(0.4)
+                
+                # Step 3: Load FastText model into memory (80% progress)
+                status_text.text("Loading FastText model into memory...")
+                progress_bar.progress(0.5)
+                
+                fasttext_model = ModelManager._load_fasttext_model_optimized()
+                
+                if fasttext_model is not None:
+                    ModelManager._model_cache["fasttext_model"] = fasttext_model
+                    progress_bar.progress(0.8)
+                    st.success("✅ FastText model loaded into memory")
+                else:
                     st.info("💡 Continuing with SVM-only classification")
-                    fasttext_model = None
-            
-            # Create or load configuration
-            config = ModelManager._get_or_create_config()
-            
-            return svm_model, fasttext_model, config
+                    ModelManager._model_cache["fasttext_model"] = None
+                
+                # Step 4: Load configuration (100% progress)
+                status_text.text("Loading configuration...")
+                progress_bar.progress(0.9)
+                
+                config = ModelManager._get_or_create_config()
+                ModelManager._model_cache["config"] = config
+                
+                progress_bar.progress(1.0)
+                status_text.text("✅ All models loaded successfully!")
+                
+                # Memory usage info
+                ModelManager._show_memory_usage()
+                
+                return svm_model, fasttext_model, config
             
         except Exception as e:
             st.error(f"Error loading models: {e}")
+            ModelManager._loading_in_progress = False
             st.stop()
+        finally:
+            ModelManager._loading_in_progress = False
+    
+    @staticmethod
+    def _load_fasttext_model_optimized():
+        """Optimized FastText model loading with multiple fallback methods"""
+        try:
+            # Method 1: Try gensim first (most memory efficient)
+            try:
+                from gensim.models.fasttext import load_facebook_model
+                st.info("🔄 Loading FastText model using gensim (memory optimized)...")
+                fasttext_model = load_facebook_model(Config.FASTTEXT_MODEL_PATH)
+                st.success("✅ FastText model loaded with gensim")
+                return fasttext_model
+                
+            except ImportError as gensim_error:
+                if "triu" in str(gensim_error) or "scipy" in str(gensim_error):
+                    st.warning(f"⚠️ Gensim compatibility issue: {gensim_error}")
+                    st.info("🔄 Trying alternative FastText loading method...")
+                else:
+                    raise gensim_error
+            
+            # Method 2: Try fasttext library as fallback
+            try:
+                import fasttext
+                st.info("🔄 Loading FastText model using fasttext library...")
+                fasttext_model = fasttext.load_model(Config.FASTTEXT_MODEL_PATH)
+                st.success("✅ FastText model loaded with fasttext library")
+                return fasttext_model
+                
+            except ImportError:
+                st.error("❌ FastText library not available. Install with: pip install fasttext")
+                return None
+            except Exception as fasttext_error:
+                st.error(f"❌ FastText library loading failed: {fasttext_error}")
+                return None
+                
+        except Exception as e:
+            st.error(f"❌ Critical error loading FastText model: {e}")
+            st.error("The model file might be corrupted. Try deleting cc.km.300.bin and restart the application.")
+            
+            with st.expander("🔧 Troubleshooting Options", expanded=False):
+                st.markdown("""
+                **Option 1: Delete and re-download model**
+                ```bash
+                rm cc.km.300.bin
+                # Restart the application
+                ```
+                
+                **Option 2: Fix dependencies**
+                ```bash
+                pip install --upgrade gensim>=4.2.0 scipy>=1.7.0 fasttext
+                ```
+                
+                **Option 3: Alternative model download**
+                ```bash
+                wget https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.km.300.bin.gz
+                gunzip cc.km.300.bin.gz
+                ```
+                """)
+            
+            return None
+    
+    @staticmethod
+    def _show_memory_usage():
+        """Display memory usage information"""
+        try:
+            import psutil
+            process = psutil.Process()
+            memory_info = process.memory_info()
+            memory_mb = memory_info.rss / 1024 / 1024
+            
+            st.info(f"� Current memory usage: {memory_mb:.1f} MB")
+            
+            if memory_mb > 1000:  # More than 1GB
+                st.info("📊 Large model loaded - this is normal for FastText embeddings")
+            
+        except ImportError:
+            st.info("💾 Memory monitoring unavailable (install psutil for memory stats)")
+        except Exception as e:
+            # Silently handle memory monitoring errors
+            pass
+    
+    @staticmethod
+    def clear_model_cache():
+        """Clear model cache to free memory"""
+        ModelManager._model_cache.clear()
+        st.cache_resource.clear()
+        st.success("🗑️ Model cache cleared")
+    
+    @staticmethod
+    def get_model_info():
+        """Get information about loaded models"""
+        info = {
+            "svm_loaded": "svm_model" in ModelManager._model_cache,
+            "fasttext_loaded": "fasttext_model" in ModelManager._model_cache,
+            "config_loaded": "config" in ModelManager._model_cache,
+            "cache_size": len(ModelManager._model_cache)
+        }
+        return info
     
     @staticmethod
     def _get_or_create_config():
@@ -1789,6 +1879,44 @@ def main():
     # Header with application title and description
     st.markdown("<h1 class='main-header'>Khmer News Classifier</h1>", unsafe_allow_html=True)
     st.markdown("<p class='sub-header'>Advanced Text Classification for Khmer Language News Articles</p>", unsafe_allow_html=True)
+    
+    # Sidebar for advanced options and memory management
+    with st.sidebar:
+        st.markdown("### ⚙️ System Controls")
+        
+        # Model information
+        model_info = ModelManager.get_model_info()
+        st.markdown("#### 🧠 Model Status")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("SVM", "✅" if model_info["svm_loaded"] else "❌")
+        with col2:
+            st.metric("FastText", "✅" if model_info["fasttext_loaded"] else "❌")
+        
+        # Memory management
+        st.markdown("#### 💾 Memory Management")
+        
+        if st.button("🗑️ Clear Model Cache", help="Clear models from memory to free up space"):
+            ModelManager.clear_model_cache()
+            st.experimental_rerun()
+        
+        if st.button("📊 Show Memory Usage", help="Display current memory usage"):
+            ModelManager._show_memory_usage()
+        
+        # Advanced options
+        with st.expander("🔧 Advanced Options"):
+            st.markdown("""
+            **Model Loading Options:**
+            - Models are cached in memory for faster processing
+            - Clear cache if experiencing memory issues
+            - FastText model uses ~2.8GB of RAM when loaded
+            
+            **Performance Tips:**
+            - Keep models in memory for best performance
+            - Use batch processing for multiple texts
+            - Monitor memory usage on resource-constrained systems
+            """)
     
     # Create tabs for different sections
     classifier_tab, session_history_tab = st.tabs([
