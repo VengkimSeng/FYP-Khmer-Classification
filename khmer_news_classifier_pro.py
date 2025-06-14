@@ -56,6 +56,19 @@ except ImportError:
     def check_fasttext_model(base_dir=None):
         return os.path.exists(os.path.join(base_dir or ".", "cc.km.300.bin"))
 
+# Import cloud optimizer for Streamlit free tier
+try:
+    from streamlit_cloud_optimizer import (
+        load_cloud_optimized_fasttext,
+        get_text_features_cloud_optimized, 
+        show_cloud_optimization_info,
+        get_cloud_optimizer
+    )
+    CLOUD_OPTIMIZER_AVAILABLE = True
+except ImportError:
+    st.warning("⚠️ Cloud optimizer not available. Full FastText model will be used.")
+    CLOUD_OPTIMIZER_AVAILABLE = False
+
 
 
 # Configure page settings
@@ -546,19 +559,29 @@ class ModelManager:
                 
                 progress_bar.progress(0.4)
                 
-                # Step 3: Load FastText model into memory (80% progress)
-                status_text.text("Loading FastText model into memory...")
+                # Step 3: Load FastText model with cloud optimization (80% progress)
+                status_text.text("Loading FastText model (cloud optimized)...")
                 progress_bar.progress(0.5)
                 
-                fasttext_model = ModelManager._load_fasttext_model_optimized()
-                
-                if fasttext_model is not None:
-                    ModelManager._model_cache["fasttext_model"] = fasttext_model
+                if CLOUD_OPTIMIZER_AVAILABLE:
+                    fasttext_result = load_cloud_optimized_fasttext()
+                    ModelManager._model_cache["fasttext_model"] = fasttext_result
                     progress_bar.progress(0.8)
-                    st.success("✅ FastText model loaded into memory")
+                    
+                    if fasttext_result['type'] != 'none':
+                        st.success(f"✅ FastText model loaded ({fasttext_result['type']} mode)")
+                    else:
+                        st.info("💡 Continuing with SVM-only classification")
                 else:
-                    st.info("💡 Continuing with SVM-only classification")
-                    ModelManager._model_cache["fasttext_model"] = None
+                    # Fallback to original method for local development
+                    fasttext_model = ModelManager._load_fasttext_model_optimized()
+                    if fasttext_model is not None:
+                        ModelManager._model_cache["fasttext_model"] = {'type': 'full', 'model': fasttext_model}
+                        progress_bar.progress(0.8)
+                        st.success("✅ FastText model loaded into memory")
+                    else:
+                        st.info("💡 Continuing with SVM-only classification")
+                        ModelManager._model_cache["fasttext_model"] = {'type': 'none', 'model': None}
                 
                 # Step 4: Load configuration (100% progress)
                 status_text.text("Loading configuration...")
@@ -785,6 +808,11 @@ class ClassificationEngine:
         if not words:
             return np.zeros(300)
         
+        # Use cloud-optimized embedding extraction if available
+        if CLOUD_OPTIMIZER_AVAILABLE and isinstance(self.fasttext_model, dict):
+            return get_text_features_cloud_optimized(segmented_text, self.fasttext_model)
+        
+        # Original method for backward compatibility
         word_vecs = []
         for word in words:
             try:
@@ -1883,6 +1911,10 @@ def main():
     # Sidebar for advanced options and memory management
     with st.sidebar:
         st.markdown("### ⚙️ System Controls")
+        
+        # Cloud optimization info
+        if CLOUD_OPTIMIZER_AVAILABLE:
+            show_cloud_optimization_info()
         
         # Model information
         model_info = ModelManager.get_model_info()

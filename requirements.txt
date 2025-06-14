@@ -18,6 +18,7 @@ joblib==1.5.1
 jsonschema==4.24.0
 jsonschema-specifications==2025.4.1
 khmer-nltk==1.6
+psutil>=5.8.0
 kiwisolver==1.4.7
 MarkupSafe==3.0.2
 matplotlib==3.9.4
