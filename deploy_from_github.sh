@@ -42,7 +42,7 @@ log_error() {
 }
 
 # Check if required parameters are provided
-if [ "$GITHUB_REPO" = "your_github_repo_url" ]; then
+if [ "$GITHUB_REPO_PATH" = "your_github_repo_url" ]; then
     log_error "Please provide your GitHub repository and droplet IP address"
     echo "Usage: ./deploy_from_github.sh [github_repo] [server_ip] [ssh_user]"
     echo "Example: ./deploy_from_github.sh username/khmer-news-classifier 192.168.1.100 root"
