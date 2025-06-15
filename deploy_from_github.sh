@@ -100,11 +100,13 @@ run_remote "cd $APP_DIR && source venv/bin/activate && pip install --upgrade pip
 run_remote "cd $APP_DIR && source venv/bin/activate && pip install -r requirements.txt"
 
 # Download FastText model for Khmer (this is the large file we don't want in Git)
-log_info "Downloading FastText model for Khmer (.bin format, this may take 10-15 minutes)..."
+log_info "Downloading FastText model for Khmer (this may take 10-15 minutes)..."
 
-# Download the .bin model directly
-if run_remote "cd $APP_DIR && timeout 600 wget --progress=dot:giga -O cc.km.300.bin 'https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.km.300.bin'"; then
-    log_success "FastText model downloaded successfully"
+# Download the .bin.gz model directly and extract it
+if run_remote "cd $APP_DIR && timeout 600 wget --progress=dot:giga -O cc.km.300.bin.gz 'https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.km.300.bin.gz'"; then
+    log_info "Extracting FastText model..."
+    run_remote "cd $APP_DIR && gunzip cc.km.300.bin.gz"
+    log_success "FastText model downloaded and extracted successfully"
 else
     log_warning "FastText model download failed - application will work with SVM only"
 fi
