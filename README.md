@@ -22,23 +22,27 @@ A machine learning-powered web application for classifying Khmer news articles i
 ### Local Development
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/YOUR_USERNAME/khmer-news-classifier.git
 cd khmer-news-classifier
 ```
 
 2. Create virtual environment:
+
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 3. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 4. Download FastText model (optional, ~2.8GB):
+
 ```bash
 wget -O cc.km.300.vec.gz https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.km.300.vec.gz
 gunzip cc.km.300.vec.gz
@@ -46,6 +50,7 @@ mv cc.km.300.vec cc.km.300.bin
 ```
 
 5. Run the application:
+
 ```bash
 streamlit run khmer_news_classifier_pro.py
 ```
@@ -53,6 +58,7 @@ streamlit run khmer_news_classifier_pro.py
 ## Deployment to DigitalOcean
 
 ### Prerequisites
+
 - DigitalOcean droplet with Ubuntu 20.04+
 - Minimum 4GB RAM (recommended for FastText model)
 - SSH access configured
@@ -61,11 +67,13 @@ streamlit run khmer_news_classifier_pro.py
 
 1. Upload your project to GitHub
 2. Use the deployment script:
+
 ```bash
 ./deploy_from_github.sh YOUR_DROPLET_IP https://github.com/YOUR_USERNAME/khmer-news-classifier.git
 ```
 
 ### Update Deployment
+
 ```bash
 ./update_from_github.sh YOUR_DROPLET_IP
 ```
