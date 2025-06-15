@@ -1,0 +1,55 @@
+SVM Classification Report
+========================================
+
+              precision    recall  f1-score   support
+
+    economic     0.8586    0.8380    0.8482       500
+ environment     0.9415    0.9660    0.9536       500
+      health     0.9019    0.9380    0.9196       500
+     politic     0.8656    0.8760    0.8708       500
+       sport     0.9853    0.9400    0.9621       500
+  technology     0.9093    0.9020    0.9056       500
+
+    accuracy                         0.9100      3000
+   macro avg     0.9104    0.9100    0.9100      3000
+weighted avg     0.9104    0.9100    0.9100      3000
+
+
+Per-Class Metrics Summary:
+------------------------------
+economic:
+  Precision: 1.0000
+  Recall: 0.8380
+  F1-Score: 0.9119
+  Support: 500
+
+environment:
+  Precision: 1.0000
+  Recall: 0.9660
+  F1-Score: 0.9827
+  Support: 500
+
+health:
+  Precision: 1.0000
+  Recall: 0.9380
+  F1-Score: 0.9680
+  Support: 500
+
+politic:
+  Precision: 1.0000
+  Recall: 0.8760
+  F1-Score: 0.9339
+  Support: 500
+
+sport:
+  Precision: 1.0000
+  Recall: 0.9400
+  F1-Score: 0.9691
+  Support: 500
+
+technology:
+  Precision: 1.0000
+  Recall: 0.9020
+  F1-Score: 0.9485
+  Support: 500
+

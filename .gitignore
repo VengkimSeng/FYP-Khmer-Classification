@@ -60,8 +60,7 @@ cython_debug/
 Thumbs.db
 .DS_Store
 
-Fasttext/
-Tf_IDF/
+
 raw_articles/
 preprocessed_articles/
 cc.km.300.bin

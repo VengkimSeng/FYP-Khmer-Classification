@@ -1,0 +1,20 @@
+SVM Model Information
+============================================================
+
+Pipeline: StandardScaler + SVM
+Model Type: Support Vector Machine (RBF kernel)
+Parameters: C=0.1, gamma=scale, class_weight=balanced, probability=True
+Feature Engineering: FastText mean embeddings
+Feature Count: 300
+Training Samples: 11996
+Test Samples: 3000
+Training Time: 47.88 seconds
+Training Accuracy: 0.9225
+Validation Accuracy: 0.9104
+Test Accuracy: 0.9100
+Test F1-Score: 0.9100
+Test Precision: 0.9104
+Test Recall: 0.9100
+Overfitting Gap: 0.0125
+CV Mean: 0.9104
+CV Std: 0.0023

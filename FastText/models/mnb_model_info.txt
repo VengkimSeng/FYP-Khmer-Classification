@@ -1,0 +1,14 @@
+MNB Model Information
+============================================================
+
+Model Type: Multinomial Naive Bayes
+Feature Engineering: FastText mean embeddings (shifted for non-negativity)
+Feature Count: 300
+Training Samples: 11996
+Test Samples: 3000
+Test Accuracy: 0.8493
+Test F1-Score: 0.8490
+Test Precision: 0.8561
+Test Recall: 0.8493
+CV F1 Mean: 0.8607
+CV F1 Std: 0.0046

@@ -1,0 +1,28 @@
+MNB Error Analysis
+========================================
+
+Total test samples: 3000
+Misclassified samples: 452
+Overall error rate: 15.07%
+
+Error Rates by Category:
+------------------------------
+economic: 30.60% error rate (347/500 correctly classified)
+technology: 24.80% error rate (376/500 correctly classified)
+health: 12.20% error rate (439/500 correctly classified)
+politic: 11.80% error rate (441/500 correctly classified)
+sport: 6.40% error rate (468/500 correctly classified)
+environment: 4.60% error rate (477/500 correctly classified)
+
+Most Common Misclassification Pairs:
+----------------------------------------
+economic -> environment: 84 instances
+technology -> economic: 72 instances
+economic -> politic: 50 instances
+politic -> economic: 25 instances
+technology -> health: 25 instances
+politic -> environment: 23 instances
+health -> politic: 23 instances
+health -> economic: 21 instances
+sport -> politic: 19 instances
+technology -> politic: 15 instances

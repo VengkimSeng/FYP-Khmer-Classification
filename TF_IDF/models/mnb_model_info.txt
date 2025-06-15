@@ -1,0 +1,21 @@
+MNB Model Information
+============================================================
+
+Model Files:
+   • Model: mnb_model.joblib
+   • Corresponding Vectorizer: tfidf_vectorizer_filtered.joblib
+
+Dataset Information:
+   • Feature count: 150
+   • Training samples: 12,000
+   • Test samples: 3,000
+
+Vectorizer Information:
+   • File: tfidf_vectorizer_filtered.joblib
+   • Path: TF_IDF/features/tfidf_vectorizer_filtered.joblib
+
+Model Training:
+   • Algorithm: Multinomial Naive Bayes
+   • Parameters: Default
+   • Training time: 0.01 seconds
+   • Test accuracy: 0.8993

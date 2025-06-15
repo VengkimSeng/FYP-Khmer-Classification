@@ -1,0 +1,55 @@
+MNB Classification Report
+========================================
+
+              precision    recall  f1-score   support
+
+    economic     0.7259    0.6940    0.7096       500
+ environment     0.7937    0.9540    0.8665       500
+      health     0.9262    0.8780    0.9014       500
+     politic     0.7833    0.8820    0.8297       500
+       sport     0.9649    0.9360    0.9503       500
+  technology     0.9424    0.7520    0.8365       500
+
+    accuracy                         0.8493      3000
+   macro avg     0.8561    0.8493    0.8490      3000
+weighted avg     0.8561    0.8493    0.8490      3000
+
+
+Per-Class Metrics Summary:
+------------------------------
+economic:
+  Precision: 1.0000
+  Recall: 0.6940
+  F1-Score: 0.8194
+  Support: 500
+
+environment:
+  Precision: 1.0000
+  Recall: 0.9540
+  F1-Score: 0.9765
+  Support: 500
+
+health:
+  Precision: 1.0000
+  Recall: 0.8780
+  F1-Score: 0.9350
+  Support: 500
+
+politic:
+  Precision: 1.0000
+  Recall: 0.8820
+  F1-Score: 0.9373
+  Support: 500
+
+sport:
+  Precision: 1.0000
+  Recall: 0.9360
+  F1-Score: 0.9669
+  Support: 500
+
+technology:
+  Precision: 1.0000
+  Recall: 0.7520
+  F1-Score: 0.8584
+  Support: 500
+

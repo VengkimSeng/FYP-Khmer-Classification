@@ -1,0 +1,12 @@
+{
+    "feature_count": 300,
+    "train_samples": 11996,
+    "test_samples": 3000,
+    "feature_type": "fasttext_mean_embeddings",
+    "feature_range": {
+        "min": -0.4816374182701111,
+        "max": 0.834966778755188,
+        "mean": 0.0011887353612110019,
+        "std": 0.019160285592079163
+    }
+}

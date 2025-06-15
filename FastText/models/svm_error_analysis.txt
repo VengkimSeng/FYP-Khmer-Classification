@@ -1,0 +1,28 @@
+SVM Error Analysis
+========================================
+
+Total test samples: 3000
+Misclassified samples: 270
+Overall error rate: 9.00%
+
+Error Rates by Category:
+------------------------------
+economic: 16.20% error rate (419/500 correctly classified)
+politic: 12.40% error rate (438/500 correctly classified)
+technology: 9.80% error rate (451/500 correctly classified)
+health: 6.20% error rate (469/500 correctly classified)
+sport: 6.00% error rate (470/500 correctly classified)
+environment: 3.40% error rate (483/500 correctly classified)
+
+Most Common Misclassification Pairs:
+----------------------------------------
+economic -> politic: 29 instances
+politic -> economic: 28 instances
+economic -> technology: 24 instances
+technology -> health: 20 instances
+technology -> economic: 20 instances
+economic -> environment: 20 instances
+health -> politic: 19 instances
+politic -> health: 13 instances
+politic -> technology: 12 instances
+sport -> politic: 11 instances

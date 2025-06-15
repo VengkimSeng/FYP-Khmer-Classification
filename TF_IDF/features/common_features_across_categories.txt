@@ -1,0 +1,71 @@
+Common Features Across All Categories
+========================================
+
+Number of common features: 64
+
+Feature                        Avg Weight   Category-specific Weights
+--------------------------------------------------------------------------------
+កម្ពុជា                        0.04932492   economic:0.115920, environment:0.022419, health:0.007276, politic:0.086402, sport:0.047322, technology:0.016610
+កម្មវិធី                       0.01650727   economic:0.008906, environment:0.003455, health:0.028003, politic:0.004876, sport:0.006811, technology:0.046992
+កម្លាំង                        0.00673988   economic:0.003767, environment:0.005694, health:0.007065, politic:0.006863, sport:0.003580, technology:0.013471
+ករណី                           0.00805675   economic:0.002910, environment:0.013857, health:0.017886, politic:0.006954, sport:0.002504, technology:0.004230
+កូន                            0.02416672   economic:0.003236, environment:0.008258, health:0.116233, politic:0.004241, sport:0.009386, technology:0.003645
+ក្រសួង                         0.01972730   economic:0.035150, environment:0.033819, health:0.009131, politic:0.024845, sport:0.008268, technology:0.007152
+ក្រុង                          0.00747426   economic:0.006608, environment:0.012995, health:0.011339, politic:0.007595, sport:0.002759, technology:0.003549
+ក្រុមហ៊ុន                      0.03815007   economic:0.038000, environment:0.043119, health:0.002890, politic:0.006073, sport:0.004812, technology:0.134007
+ក្រោម                          0.00902177   economic:0.007198, environment:0.012004, health:0.008574, politic:0.008484, sport:0.013108, technology:0.004764
+ក្រៅ                           0.00688366   economic:0.009779, environment:0.008668, health:0.004710, politic:0.010384, sport:0.004900, technology:0.002862
+ក្រៅពី                         0.00434497   economic:0.004874, environment:0.003794, health:0.004186, politic:0.002501, sport:0.003609, technology:0.007105
+ខណៈ                            0.00942219   economic:0.013151, environment:0.005341, health:0.002679, politic:0.005941, sport:0.019563, technology:0.009859
+ខាងមុខ                         0.00730400   economic:0.007214, environment:0.004530, health:0.004146, politic:0.006223, sport:0.009604, technology:0.012106
+ខេត្ត                          0.02465083   economic:0.028732, environment:0.080944, health:0.005452, politic:0.017977, sport:0.011605, technology:0.003196
+ខែ                             0.00936184   economic:0.017692, environment:0.013005, health:0.004586, politic:0.005061, sport:0.006710, technology:0.009116
+ចិន                            0.01957423   economic:0.036526, environment:0.008607, health:0.009170, politic:0.026549, sport:0.010729, technology:0.025864
+ចំណុច                          0.00540631   economic:0.002860, environment:0.007938, health:0.004505, politic:0.006326, sport:0.002807, technology:0.008001
+ច្បាប់                         0.01608914   economic:0.012350, environment:0.044149, health:0.004582, politic:0.026123, sport:0.003609, technology:0.005722
+ជាតិ                           0.02035899   economic:0.015711, environment:0.017518, health:0.027685, politic:0.035707, sport:0.021630, technology:0.003903
+ជាពិសេស                        0.00761241   economic:0.013060, environment:0.006260, health:0.009935, politic:0.006297, sport:0.004768, technology:0.005354
+ជុំវិញ                         0.00577510   economic:0.008846, environment:0.010210, health:0.003610, politic:0.002781, sport:0.005365, technology:0.003839
+ជំរុញ                          0.00818458   economic:0.021244, environment:0.005203, health:0.006518, politic:0.007640, sport:0.003988, technology:0.004514
+ដោយសារ                         0.00818015   economic:0.011275, environment:0.015131, health:0.007167, politic:0.004926, sport:0.006280, technology:0.004301
+តំបន់                          0.01796305   economic:0.017952, environment:0.059920, health:0.003567, politic:0.012841, sport:0.007925, technology:0.005572
+ថៃ                             0.01048697   economic:0.013897, environment:0.003422, health:0.002757, politic:0.010972, sport:0.025494, technology:0.006380
+ថ្ងៃទី                         0.02075748   economic:0.018423, environment:0.022752, health:0.009483, politic:0.031483, sport:0.032254, technology:0.010151
+ទីក្រុង                        0.00935730   economic:0.007580, environment:0.003571, health:0.002776, politic:0.012294, sport:0.021450, technology:0.008473
+ទើប                            0.00555206   economic:0.003240, environment:0.006341, health:0.009490, politic:0.004056, sport:0.005453, technology:0.004733
+ធំ                             0.01191477   economic:0.010017, environment:0.016599, health:0.011052, politic:0.005400, sport:0.010930, technology:0.017491
+នានា                           0.00556312   economic:0.010534, environment:0.004383, health:0.002573, politic:0.008488, sport:0.002258, technology:0.005142
+នាយក                           0.01258890   economic:0.016685, environment:0.007165, health:0.003233, politic:0.034644, sport:0.004487, technology:0.009320
+ប្រជាជន                        0.00929624   economic:0.006883, environment:0.004779, health:0.003355, politic:0.034087, sport:0.003165, technology:0.003508
+ប្រទេស                         0.03210952   economic:0.051453, environment:0.018535, health:0.010124, politic:0.047011, sport:0.036008, technology:0.029526
+ប្រព័ន្ធ                       0.01529470   economic:0.019059, environment:0.006901, health:0.018213, politic:0.006280, sport:0.003901, technology:0.037414
+ប្រភព                          0.00764636   economic:0.002863, environment:0.005196, health:0.008953, politic:0.002599, sport:0.014687, technology:0.011580
+ប្រមាណ                         0.00847016   economic:0.022294, environment:0.010067, health:0.002587, politic:0.004896, sport:0.003163, technology:0.007813
+ផង                             0.00484863   economic:0.003884, environment:0.008786, health:0.003765, politic:0.004829, sport:0.003628, technology:0.004199
+ផ្ទះ                           0.01049632   economic:0.004802, environment:0.009603, health:0.011825, politic:0.005017, sport:0.029147, technology:0.002583
+ផ្លូវ                          0.00934539   economic:0.010915, environment:0.012573, health:0.004300, politic:0.012148, sport:0.003950, technology:0.012186
+ផ្សេង                          0.01102632   economic:0.011973, environment:0.009151, health:0.014920, politic:0.006712, sport:0.008197, technology:0.015204
+ពាន់                           0.00974559   economic:0.023348, environment:0.013284, health:0.004416, politic:0.002691, sport:0.004930, technology:0.009805
+ពិភពលោក                        0.01133870   economic:0.012011, environment:0.004286, health:0.006355, politic:0.006910, sport:0.021220, technology:0.017249
+ពិសេស                          0.00831136   economic:0.008626, environment:0.003721, health:0.005371, politic:0.006833, sport:0.006713, technology:0.018605
+មនុស្ស                         0.01293306   economic:0.006631, environment:0.011329, health:0.027333, politic:0.014984, sport:0.004675, technology:0.012647
+ម៉ឺន                           0.00717216   economic:0.013011, environment:0.010441, health:0.005106, politic:0.003920, sport:0.005085, technology:0.005470
+រក្សា                          0.00752148   economic:0.006084, environment:0.018718, health:0.009029, politic:0.004767, sport:0.002458, technology:0.004072
+រដ្ឋាភិបាល                     0.01713566   economic:0.033277, environment:0.029088, health:0.005192, politic:0.026216, sport:0.003513, technology:0.005528
+រាជធានី                        0.00922198   economic:0.004793, environment:0.004939, health:0.009941, politic:0.021033, sport:0.011452, technology:0.003174
+រឿង                            0.01036756   economic:0.005047, environment:0.019113, health:0.016238, politic:0.008700, sport:0.008370, technology:0.004737
+លក្ខណៈ                         0.00584372   economic:0.004683, environment:0.003731, health:0.007925, politic:0.002505, sport:0.003132, technology:0.013086
+លាន                            0.01814683   economic:0.045832, environment:0.006598, health:0.006731, politic:0.008257, sport:0.018779, technology:0.022684
+លុយ                            0.00452208   economic:0.007045, environment:0.007046, health:0.003419, politic:0.002978, sport:0.002790, technology:0.003854
+លេខ                            0.00930322   economic:0.003092, environment:0.003271, health:0.008227, politic:0.002919, sport:0.022512, technology:0.015799
+លោក                            0.05521899   economic:0.046899, environment:0.101634, health:0.014316, politic:0.088838, sport:0.044229, technology:0.035399
+លោកស្រី                        0.00878118   economic:0.014990, environment:0.009130, health:0.004468, politic:0.016772, sport:0.004976, technology:0.002351
+សកម្មភាព                       0.00898286   economic:0.006967, environment:0.020473, health:0.010807, politic:0.008305, sport:0.003855, technology:0.003490
+សង្គម                          0.01054574   economic:0.010499, environment:0.018105, health:0.004801, politic:0.014887, sport:0.005164, technology:0.009819
+សហរដ្ឋ                         0.00783522   economic:0.009149, environment:0.003247, health:0.002864, politic:0.011027, sport:0.007713, technology:0.013010
+ស្ថានភាព                       0.00512600   economic:0.008107, environment:0.005981, health:0.006310, politic:0.004072, sport:0.002698, technology:0.003589
+ស្វែងរក                        0.00403645   economic:0.003851, environment:0.003443, health:0.004714, politic:0.003071, sport:0.003668, technology:0.005473
+ឡើងវិញ                         0.00723142   economic:0.015512, environment:0.007264, health:0.003988, politic:0.009538, sport:0.003075, technology:0.004012
+អត់                            0.00676398   economic:0.006260, environment:0.019463, health:0.003103, politic:0.005938, sport:0.002338, technology:0.003482
+អភិវឌ្ឍ                        0.00344538   economic:0.004632, environment:0.003200, health:0.003347, politic:0.002918, sport:0.002281, technology:0.004294
+អាមេរិក                        0.01606910   economic:0.021953, environment:0.004270, health:0.005418, politic:0.021842, sport:0.016724, technology:0.026208
