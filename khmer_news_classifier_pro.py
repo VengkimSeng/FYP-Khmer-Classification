@@ -349,7 +349,8 @@ class Config:
     
     SVM_MODEL_PATH = os.path.join(MODEL_DIR, "svm_model.joblib")
     CONFIG_PATH = os.path.join(MODEL_DIR, "config.json")
-    FASTTEXT_MODEL_PATH = os.path.join(MODEL_DIR, "cc.km.300.bin")
+    # FastText model is in the root directory, not in MODEL_DIR
+    FASTTEXT_MODEL_PATH = os.path.join(os.getcwd(), "cc.km.300.bin")
     
     # Training data paths (if needed)
     X_TRAIN_PATH = os.path.join(MODEL_DIR, "X_train_fasttext.joblib")

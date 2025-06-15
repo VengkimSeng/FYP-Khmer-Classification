@@ -102,7 +102,7 @@ run_remote "cd $APP_DIR && source venv/bin/activate && pip install -r requiremen
 # Download FastText model for Khmer (this is the large file we don't want in Git)
 log_info "Downloading FastText model for Khmer (this may take 10-15 minutes)..."
 
-# Download the .bin.gz model directly and extract it
+# Download the .bin.gz model and extract it
 if run_remote "cd $APP_DIR && timeout 600 wget --progress=dot:giga -O cc.km.300.bin.gz 'https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.km.300.bin.gz'"; then
     log_info "Extracting FastText model..."
     run_remote "cd $APP_DIR && gunzip cc.km.300.bin.gz"
