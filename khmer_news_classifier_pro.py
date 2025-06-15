@@ -37,8 +37,8 @@ from datetime import datetime
 
 # Configure page settings
 st.set_page_config(
-    page_title="Khmer News Classifier",
-    page_icon="📰",
+    page_title="KH News Multi-ClassClassifier",
+    page_icon="�",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -300,20 +300,71 @@ st.markdown("""
 # Configuration and constants
 class Config:
     """Application configuration constants"""
-    MODEL_DIR = "/root/FYP-Project/FYP-Feature-Extraction/FastText/FastText_Features/experiment_1_mean_pretrained"
+    # Dynamic model path detection
+    @staticmethod
+    def get_model_directory():
+        """Dynamically find the model directory based on current working directory or common locations"""
+        # First, try to find relative to current working directory
+        possible_paths = [
+            os.path.join(os.getcwd(), "Demo_model"),
+            os.path.join(os.getcwd(), "models"),
+            os.path.join(os.getcwd(), "model"),
+            os.path.join(os.path.dirname(__file__), "Demo_model"),
+            os.path.join(os.path.dirname(__file__), "models"),
+            os.path.join(os.path.dirname(__file__), "model"),
+            # Common project structure paths
+            os.path.join(os.path.expanduser("~"), "Documents", "DEV", "Demo_model"),
+            os.path.join(os.path.expanduser("~"), "Desktop", "Demo_model"),
+            os.path.join(os.path.expanduser("~"), "Downloads", "Demo_model"),
+        ]
+        
+        for path in possible_paths:
+            if os.path.exists(path) and os.path.isdir(path):
+                # Verify it contains expected model files
+                expected_files = ["svm_model.joblib", "config.json"]
+                if all(os.path.exists(os.path.join(path, f)) for f in expected_files):
+                    return path
+        
+        # If no valid directory found, return None
+        return None
+    
+    # Initialize model directory
+    MODEL_DIR = get_model_directory.__func__() or os.path.join(os.getcwd(), "Demo_model")
+    
+    if not os.path.exists(MODEL_DIR):
+        st.error(f"""
+        Model directory not found!
+        
+        Please ensure your model files are in one of these locations:
+        • Current directory: {os.path.join(os.getcwd(), "Demo_model")}
+        • Same folder as script: {os.path.join(os.path.dirname(__file__) if '__file__' in globals() else os.getcwd(), "Demo_model")}
+        • Home Documents: {os.path.join(os.path.expanduser("~"), "Documents", "DEV", "Demo_model")}
+        • Desktop: {os.path.join(os.path.expanduser("~"), "Desktop", "Demo_model")}
+        
+        Required files:
+        • svm_model.joblib
+        • config.json
+        """)
+        st.stop()
+    
     SVM_MODEL_PATH = os.path.join(MODEL_DIR, "svm_model.joblib")
     CONFIG_PATH = os.path.join(MODEL_DIR, "config.json")
-    ARTICLES_DIR = "/root/FYP-Project/articles"
-    PREPROCESSED_DIR = "/root/FYP-Project/Preprocess_articles"
+    FASTTEXT_MODEL_PATH = os.path.join(MODEL_DIR, "cc.km.300.bin")
+    
+    # Training data paths (if needed)
+    X_TRAIN_PATH = os.path.join(MODEL_DIR, "X_train_fasttext.joblib")
+    X_TEST_PATH = os.path.join(MODEL_DIR, "X_test_fasttext.joblib")
+    Y_TRAIN_PATH = os.path.join(MODEL_DIR, "y_train_fasttext.joblib")
+    Y_TEST_PATH = os.path.join(MODEL_DIR, "y_test_fasttext.joblib")
     
     CATEGORIES = ["economic", "environment", "health", "politic", "sport", "technology"]
     CATEGORY_LABELS = {
-        "economic": "Economic & Finance",
-        "environment": "Environment & Nature", 
-        "health": "Health & Medical",
-        "politic": "Politics & Government",
-        "sport": "Sports & Recreation",
-        "technology": "Technology & Innovation"
+        "economic": "Economic",
+        "environment": "Environment", 
+        "health": "Health",
+        "politic": "Politics",
+        "sport": "Sports",
+        "technology": "Technology"
     }
     
     # Khmer character sets for preprocessing
@@ -779,7 +830,7 @@ def export_results(result):
         key=f"download_{result.prediction_id}"
     )
     
-    st.success("✅ Export ready! Click the download button above.")
+    st.success("Export ready! Click the download button above.")
 
 def export_session_history(results):
     """Export multiple classification results to JSON"""
@@ -810,7 +861,7 @@ def export_session_history(results):
         key="download_all_results"
     )
     
-    st.success(f"✅ Export ready! {len(results)} records included.")
+    st.success(f"Export ready! {len(results)} records included.")
     
 # Initialize database on startup
 # DatabaseManager.init_database() - Commented out as database functionality removed
@@ -825,10 +876,10 @@ def render_single_analysis():
     
         
         # Input method selection with modern tab-based approach
-        st.markdown("### 📝 Input Selection")
+        st.markdown("### Input Selection")
         
         # Create interactive tabs for input methods
-        input_tab1, input_tab2 = st.tabs(["✍️ **Text Input**", "📄 **PDF Upload**"])
+        input_tab1, input_tab2 = st.tabs(["**Text Input**", "**PDF Upload**"])
         
         text_input = ""
         
@@ -840,12 +891,12 @@ def render_single_analysis():
                 "Paste your Khmer news article here:",
                 height=350,
                 placeholder="បញ្ចូលអត្ថបទភាសាខ្មែរនៅទីនេះ...\n\nExample:\nរដ្ឋាភិបាលកម្ពុជាបានប្រកាសគម្រោងអភិវឌ្ឍន៍ថ្មីសម្រាប់កម្មវិធីបរិស្ថាន និងការកាត់បន្ថយការប្រើប្រាស់ភ្លាស្ទិក...",
-                help="💡 Tip: For best results, use complete sentences with at least 50 words"
+                help="Tip: For best results, use complete sentences with at least 50 words"
             )
             
             if text_input:
                 # Live text analysis panel
-                st.markdown("##### 📊 Live Text Analysis")
+                st.markdown("##### Live Text Analysis")
                 
                 # Create metrics in a 2x2 grid
                 metric_col1, metric_col2 = st.columns(2)
@@ -853,9 +904,9 @@ def render_single_analysis():
                 with metric_col1:
                     char_count = len(text_input)
                     word_count = len(text_input.split())
-                    st.metric("📝 Characters", f"{char_count:,}", 
+                    st.metric("Characters", f"{char_count:,}", 
                              delta=f"+{char_count}" if char_count > 0 else None)
-                    st.metric("🔤 Words", f"{word_count:,}",
+                    st.metric("Words", f"{word_count:,}",
                              delta=f"+{word_count}" if word_count > 0 else None)
                 
                 with metric_col2:
@@ -864,17 +915,17 @@ def render_single_analysis():
                     khmer_chars = sum(1 for char in text_input if char in Config.KHCONST)
                     khmer_ratio = khmer_chars / len(text_input) if len(text_input) > 0 else 0
                     
-                    st.metric("📄 Sentences", f"{sentences:,}")
-                    st.metric("🇰🇭 Khmer Content", f"{khmer_ratio:.1%}",
+                    st.metric("Sentences", f"{sentences:,}")
+                    st.metric("Khmer Content", f"{khmer_ratio:.1%}",
                              delta="Good" if khmer_ratio > 0.8 else "Check content" if khmer_ratio > 0.5 else "Low Khmer")
                 
                 # Text quality indicator
                 if word_count >= 50:
-                    st.success("✅ Text length is optimal for classification")
+                    st.success("Text length is optimal for classification")
                 elif word_count >= 20:
-                    st.warning("⚠️ Text is short but analyzable")
+                    st.warning("Text is short but analyzable")
                 else:
-                    st.info("ℹ️ Consider adding more text for better accuracy")
+                    st.info("Consider adding more text for better accuracy")
         
         with input_tab2:
             st.markdown("#### PDF Document Upload")
@@ -882,7 +933,7 @@ def render_single_analysis():
             
             # Create an upload area with custom styling
             uploaded_file = st.file_uploader(
-                "📁 Choose your PDF file",
+                "Choose your PDF file",
                 type=["pdf"],
                 help="Upload PDF files containing Khmer text. Maximum file size: 10MB",
                 label_visibility="collapsed"
@@ -891,14 +942,14 @@ def render_single_analysis():
             if uploaded_file is not None:
                 # File info display
                 file_size = len(uploaded_file.getvalue()) / 1024  # KB
-                st.info(f"📄 **{uploaded_file.name}** ({file_size:.1f} KB)")
+                st.info(f"**{uploaded_file.name}** ({file_size:.1f} KB)")
                 
                 # Progress bar for extraction
                 progress_bar = st.progress(0)
                 status_text = st.empty()
                 
                 try:
-                    status_text.text("🔄 Extracting text from PDF...")
+                    status_text.text("Extracting text from PDF...")
                     progress_bar.progress(25)
                     
                     extracted_text = extract_pdf_text(uploaded_file)
@@ -910,29 +961,28 @@ def render_single_analysis():
                         status_text.empty()
                         progress_bar.empty()
                         
-                        # Success notification
-                        st.success(f"✅ Successfully extracted {len(extracted_text):,} characters!")
+                        # Success notification                        st.success(f"Successfully extracted {len(extracted_text):,} characters!")
                         
                         # PDF analysis results
-                        st.markdown("##### 📊 Document Analysis")
+                        st.markdown("##### Document Analysis")
                         
                         # Create metrics layout
                         pdf_col1, pdf_col2, pdf_col3 = st.columns(3)
                         
                         with pdf_col1:
-                            st.metric("📁 File Size", f"{file_size:.1f} KB")
+                            st.metric("File Size", f"{file_size:.1f} KB")
                         
                         with pdf_col2:
                             word_count = len(extracted_text.split())
-                            st.metric("🔤 Words", f"{word_count:,}")
-
+                            st.metric("Words", f"{word_count:,}")
+                        
                         with pdf_col3:
-                            st.metric("📝 Characters", f"{len(extracted_text):,}")
+                            st.metric("Characters", f"{len(extracted_text):,}")
                         
                         # Document preview with enhanced display
                         with st.expander("📖 Document Preview", expanded=False):
                             # Toggle for showing complete document
-                            show_complete = st.toggle("📄 Show Complete Document")
+                            show_complete = st.toggle("Show Complete Document")
                             
                             if show_complete:
                                 # Show complete document in the same field
@@ -964,14 +1014,14 @@ def render_single_analysis():
                             col1, col2 = st.columns([1, 1])
                             with col1:
                                 # Copy to clipboard button
-                                if st.button("📋 Copy Text", type="secondary", use_container_width=True):
+                                if st.button("Copy Text", type="secondary", use_container_width=True):
                                     st.code(extracted_text[:500] + "..." if len(extracted_text) > 500 else extracted_text)
-                                    st.success("✅ Text ready to copy!")
+                                    st.success("Text ready to copy!")
                             
                             with col2:
                                 # Download button
                                 st.download_button(
-                                    label="💾 Download TXT",
+                                    label="Download TXT",
                                     data=extracted_text,
                                     file_name=f"extracted_{uploaded_file.name}.txt",
                                     mime="text/plain",
@@ -980,12 +1030,12 @@ def render_single_analysis():
                     else:
                         progress_bar.empty()
                         status_text.empty()
-                        st.error("❌ Failed to extract text from PDF. Please ensure the file contains readable text.")
+                        st.error("Failed to extract text from PDF. Please ensure the file contains readable text.")
                         
                 except Exception as e:
                     progress_bar.empty()
                     status_text.empty()
-                    st.error(f"❌ Error processing PDF: {str(e)}")
+                    st.error(f"Error processing PDF: {str(e)}")
             
             else:
                 # Show upload instructions when no file is selected
@@ -998,7 +1048,7 @@ def render_single_analysis():
                     background-color: #f9f9f9;
                     margin: 1rem 0;
                 ">
-                    <h4 style="color: #666;">📁 Upload Instructions</h4>
+                    <h4 style="color: #666;">Upload Instructions</h4>
                     <p style="color: #888; margin: 0.5rem 0;">
                         • Supported format: PDF files only<br>
                         • Maximum file size: 10MB<br>
@@ -1010,7 +1060,7 @@ def render_single_analysis():
         # Analysis button
         st.markdown("---")
         if text_input:
-            if st.button("🚀 Analyze Text", type="primary", use_container_width=True):
+            if st.button("Analyze Text", type="primary", use_container_width=True):
                 # Store result in session state to display in output column
                 with st.spinner("Analyzing..."):
                     result = classification_engine.classify_text(text_input)
@@ -1020,10 +1070,10 @@ def render_single_analysis():
                     # Save to database
                     # DatabaseManager.save_classification(result)
                     
-                st.success("✅ Analysis complete! Check results →")
+                st.success("Analysis complete! Check results on the right")
     
     with output_col:
-        st.markdown("## 🎯 Results Section")
+        st.markdown("### Results Section")
         
         if 'current_result' in st.session_state:
             result = st.session_state.current_result
@@ -1065,7 +1115,7 @@ def render_single_analysis():
                     opacity: 0.3;
                 "></div>
                 <div style="position: relative; z-index: 1;">
-                    <h3 style="margin: 0; font-size: 1.3rem; font-weight: 700; margin-bottom: 0.5rem;">
+                    <h3 style="margin: 0; font-size: 1.3rem; font-weight: 700; margin-bottom: 0.3rem;">
                         📂 {predicted_category}
                     </h3>
                     <p style="margin: 0; font-size: 1.1rem; font-weight: 600; opacity: 0.95;">
@@ -1086,7 +1136,7 @@ def render_single_analysis():
                 st.session_state.show_pipeline_request = False
             
             # Wide button to trigger pipeline
-            if st.button("🔧 Show Preprocessing Pipeline", key="pipeline_trigger", type="primary", use_container_width=True):
+            if st.button("Show Preprocessing Pipeline", key="pipeline_trigger", type="primary", use_container_width=True):
                 st.session_state.show_pipeline = True
                 try:
                     st.experimental_rerun()
@@ -1097,10 +1147,10 @@ def render_single_analysis():
             # Show pipeline inline if requested
             if st.session_state.get('show_pipeline', False):
                 st.markdown("---")
-                st.markdown("### 🔧 Preprocessing Pipeline")
+                st.markdown("### Preprocessing Pipeline")
                 
                 # Create tabs for each pipeline step
-                tab1, tab2, tab3, tab4 = st.tabs(["1️⃣ Original", "2️⃣ Cleaned", "3️⃣ Segmented", "4️⃣ Features"])
+                tab1, tab2, tab3 = st.tabs(["1. Original", "2. Cleaned", "3. Segmented"])
                 
                 with tab1:
                     st.markdown("**Raw input as received**")
@@ -1132,25 +1182,8 @@ def render_single_analysis():
                         key="pipeline_tab_segmented"
                     )
                 
-                with tab4:
-                    st.markdown("**300-dim FastText vector representation**")
-                    # Convert embedding to readable format
-                    embedding_str = f"Vector Dimensions: {result.embedding.shape[0]}\n\n"
-                    embedding_str += "FastText Embedding:\n"
-                    embedding_str += "\n".join([f"[{i:3d}]: {val:.6f}" for i, val in enumerate(result.embedding[:50])])
-                    if len(result.embedding) > 50:
-                        embedding_str += f"\n... and {len(result.embedding) - 50} more dimensions"
-                    
-                    st.text_area(
-                        "Feature Vector:",
-                        embedding_str,
-                        height=300,
-                        disabled=True,
-                        key="pipeline_tab_features"
-                    )
-                
                 # Close button for pipeline
-                if st.button("❌ Hide Pipeline", type="secondary", use_container_width=True):
+                if st.button("Hide Pipeline", type="secondary", use_container_width=True):
                     st.session_state.show_pipeline = False
                     try:
                         st.experimental_rerun()
@@ -1164,12 +1197,12 @@ def render_single_analysis():
             stats = result.text_statistics
             col1, col2 = st.columns(2)
             with col1:
-                st.metric("⚡ Time", f"{result.processing_time:.3f}s")
+                st.metric("Time", f"{result.processing_time:.3f}s")
             with col2:
-                st.metric("📝 Words", f"{stats['words']:,}")
+                st.metric("Words", f"{stats['words']:,}")
             
             # Confidence breakdown
-            st.markdown("### 📊 Confidence Scores")
+            st.markdown("### Confidence Scores")
             confidence_data = sorted(result.confidence.items(), key=lambda x: x[1], reverse=True)
             
             for i, (cat, conf) in enumerate(confidence_data):
@@ -1189,13 +1222,13 @@ def render_single_analysis():
                 """, unsafe_allow_html=True)
             
             # Action buttons
-            st.markdown("### 🎬 Actions")
+            st.markdown("#### Actions")
             col1, col2 = st.columns(2)
             with col1:
-                if st.button("📊 Export", type="secondary", use_container_width=True):
+                if st.button("Export", type="secondary", use_container_width=True):
                     export_results(result)
             with col2:
-                if st.button("🔄 Clear", type="secondary", use_container_width=True):
+                if st.button("Clear", type="secondary", use_container_width=True):
                     if 'current_result' in st.session_state:
                         del st.session_state.current_result
                     st.session_state["refresh_required"] = True
@@ -1231,12 +1264,12 @@ def render_session_history():
             border: 2px dashed #dee2e6;
             margin: 2rem 0;
         ">
-            <h2 style="color: #6c757d; margin-bottom: 1rem;">📚 No Articles Yet</h2>
+            <h2 style="color: #6c757d; margin-bottom: 1rem;">No Articles Yet</h2>
             <p style="color: #868e96; font-size: 1.1rem; margin-bottom: 1.5rem;">
                 Your classified articles will appear here after analysis
             </p>
             <p style="color: #adb5bd; font-style: italic;">
-                💡 Start by entering Khmer text or uploading a PDF in the Classifier tab
+                Start by entering Khmer text or uploading a PDF in the Classifier tab
             </p>
         </div>
         """, unsafe_allow_html=True)
@@ -1247,7 +1280,7 @@ def render_session_history():
     categories_used = len(set(result.prediction for result in st.session_state.classification_history))
     avg_confidence = np.mean([max(result.confidence.values()) for result in st.session_state.classification_history])
     
-    st.markdown("### 📊 Session Overview")
+    st.markdown("### Session Overview")
     
     # Statistics cards in a responsive grid
     col1, col2, col3, col4 = st.columns(4)
@@ -1256,7 +1289,7 @@ def render_session_history():
         st.markdown(f"""
         <div class="metric-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
             <h3 style="margin: 0; font-size: 2rem;">{total_articles}</h3>
-            <p style="margin: 0; opacity: 0.9;">📄 Total Articles</p>
+            <p style="margin: 0; opacity: 0.9;">Total Articles</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -1264,7 +1297,7 @@ def render_session_history():
         st.markdown(f"""
         <div class="metric-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
             <h3 style="margin: 0; font-size: 2rem;">{categories_used}/6</h3>
-            <p style="margin: 0; opacity: 0.9;">🏷️ Categories Used</p>
+            <p style="margin: 0; opacity: 0.9;">Categories Used</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -1272,7 +1305,7 @@ def render_session_history():
         st.markdown(f"""
         <div class="metric-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
             <h3 style="margin: 0; font-size: 2rem;">{avg_confidence:.0%}</h3>
-            <p style="margin: 0; opacity: 0.9;">📈 Avg Confidence</p>
+            <p style="margin: 0; opacity: 0.9;">Avg Confidence</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -1287,13 +1320,13 @@ def render_session_history():
         st.markdown(f"""
         <div class="metric-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
             <h3 style="margin: 0; font-size: 1.2rem;">{Config.CATEGORY_LABELS.get(most_common_cat[0], "N/A")}</h3>
-            <p style="margin: 0; opacity: 0.9;">🎯 Top Category</p>
+            <p style="margin: 0; opacity: 0.9;">Top Category</p>
         </div>
         """, unsafe_allow_html=True)
     
     # Category distribution visualization
     st.markdown("---")
-    st.markdown("### 📊 Category Distribution")
+    st.markdown("### Category Distribution")
     
     if category_counts:
         # Create a more visual category distribution
@@ -1331,28 +1364,28 @@ def render_session_history():
     st.markdown("---")
     
     # Enhanced search and filter options
-    st.markdown("### 🔍 Advanced Filters")
+    st.markdown("### Advanced Filters")
     
     # Filter controls in columns
     filter_col1, filter_col2, filter_col3, filter_col4 = st.columns([2, 1, 1, 1])
     
     with filter_col1:
         search_query = st.text_input(
-            "🔍 Search articles...", 
+            "Search articles...", 
             placeholder="Search by content, keywords, or phrases...",
             help="Search within article text content"
         )
     
     with filter_col2:
         category_filter = st.selectbox(
-            "📂 Category:",
+            "Category:",
             ["All Categories"] + [Config.CATEGORY_LABELS[cat] for cat in Config.CATEGORIES],
             help="Filter by news category"
         )
     
     with filter_col3:
         confidence_filter = st.selectbox(
-            "📊 Confidence:",
+            "Confidence:",
             ["All Levels", "High (>80%)", "Medium (50-80%)", "Low (<50%)"],
             help="Filter by prediction confidence"
         )
@@ -1402,7 +1435,7 @@ def render_session_history():
         filtered_results = sorted(filtered_results, key=lambda x: Config.CATEGORY_LABELS[x.prediction])
     
     # Results header with count
-    st.markdown(f"### 📋 Articles ({len(filtered_results)} found)")
+    st.markdown(f"### Articles ({len(filtered_results)} found)")
     
     if not filtered_results:
         st.markdown("""
@@ -1414,7 +1447,7 @@ def render_session_history():
             border-radius: 8px;
             margin: 1rem 0;
         ">
-            <h4 style="color: #856404;">🔍 No Results Found</h4>
+            <h4 style="color: #856404;">No Results Found</h4>
             <p style="color: #856404; margin: 0;">
                 Try adjusting your search criteria or filters
             </p>
@@ -1426,11 +1459,11 @@ def render_session_history():
     action_col1, action_col2, action_col3 = st.columns([1, 1, 2])
     
     with action_col1:
-        if st.button("📊 Export All", type="primary", use_container_width=True):
+        if st.button("Export All", type="primary", use_container_width=True):
             export_session_history(filtered_results)
     
     with action_col2:
-        if st.button("🗑️ Clear History", type="secondary", use_container_width=True):
+        if st.button("Clear History", type="secondary", use_container_width=True):
             if st.session_state.get('confirm_clear', False):
                 st.session_state.classification_history = []
                 st.session_state.confirm_clear = False
@@ -1441,7 +1474,7 @@ def render_session_history():
                     pass
             else:
                 st.session_state.confirm_clear = True
-                st.warning("⚠️ Click again to confirm clearing all history")
+                st.warning("Click again to confirm clearing all history")
     
     with action_col3:
         # Display showing results info
@@ -1456,7 +1489,7 @@ def render_session_history():
         
         # Create a more attractive expandable card
         with st.expander(
-            f"📄 {Config.CATEGORY_LABELS[result.prediction]} • {result.timestamp.strftime('%m/%d %H:%M')} • {confidence_pct:.0%} confidence",
+            f"{Config.CATEGORY_LABELS[result.prediction]} • {result.timestamp.strftime('%m/%d %H:%M')} • {confidence_pct:.0%} confidence",
             expanded=False
         ):
             # Enhanced layout with better visual hierarchy
@@ -1464,7 +1497,7 @@ def render_session_history():
             
             with main_col:
                 # Article content section
-                st.markdown("#### 📝 Article Content")
+                st.markdown("#### Article Content")
                 
                 # Smart preview with better formatting
                 preview_length = 300
@@ -1500,7 +1533,7 @@ def render_session_history():
             
             with sidebar_col:
                 # Metrics and info panel
-                st.markdown("#### 📊 Article Metrics")
+                st.markdown("#### Article Metrics")
                 
                 # Category with color coding
                 st.markdown(f"""
@@ -1512,26 +1545,26 @@ def render_session_history():
                     text-align: center;
                     margin-bottom: 1rem;
                 ">
-                    <h4 style="margin: 0; font-size: 1.1rem;">🎯 {Config.CATEGORY_LABELS[result.prediction]}</h4>
+                    <h4 style="margin: 0; font-size: 1.1rem;">{Config.CATEGORY_LABELS[result.prediction]}</h4>
                     <p style="margin: 0; opacity: 0.9;">Confidence: {confidence_pct:.1%}</p>
                 </div>
                 """, unsafe_allow_html=True)
                 
                 # Detailed metrics
-                st.metric("⚡ Processing Time", f"{result.processing_time:.3f}s")
-                st.metric("📝 Word Count", f"{result.text_statistics['words']:,}")
-                st.metric("📄 Characters", f"{result.text_statistics['characters']:,}")
-                st.metric("🔤 Sentences", f"{result.text_statistics['sentences']:,}")
+                st.metric("Processing Time", f"{result.processing_time:.3f}s")
+                st.metric("Word Count", f"{result.text_statistics['words']:,}")
+                st.metric("Characters", f"{result.text_statistics['characters']:,}")
+                st.metric("Sentences", f"{result.text_statistics['sentences']:,}")
                 
                 # Quick actions
-                st.markdown("#### 🎬 Quick Actions")
+                st.markdown("#### Quick Actions")
                 
-                if st.button(f"🔄 Re-analyze", key=f"reanalyze_{result.prediction_id}", use_container_width=True, type="secondary"):
+                if st.button(f"Re-analyze", key=f"reanalyze_{result.prediction_id}", use_container_width=True, type="secondary"):
                     with st.spinner("Re-analyzing..."):
                         new_result = classification_engine.classify_text(result.input_text)
                         st.session_state.classification_history.append(new_result)
                         st.session_state.current_result = new_result
-                    st.success("✅ Re-analyzed! Check results in Classifier tab.")
+                    st.success("Re-analyzed! Check results in Classifier tab.")
                 
                 # Export individual result
                 export_data = {
@@ -1548,7 +1581,7 @@ def render_session_history():
                 
                 json_str = json.dumps(export_data, indent=2, ensure_ascii=False)
                 st.download_button(
-                    label="💾 Export JSON",
+                    label="Export JSON",
                     data=json_str,
                     file_name=f"article_{result.prediction_id}.json",
                     mime="application/json",
@@ -1559,7 +1592,7 @@ def render_session_history():
             
             # Enhanced confidence breakdown
             st.markdown("---")
-            st.markdown("#### 📈 Detailed Confidence Analysis")
+            st.markdown("#### Detailed Confidence Analysis")
             
             confidence_data = sorted(result.confidence.items(), key=lambda x: x[1], reverse=True)
             
@@ -1582,7 +1615,7 @@ def render_session_history():
                     ">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                             <span style="font-weight: {'bold' if is_predicted else 'normal'}; font-size: 0.9rem; color: #2c3e50;">
-                                {'🎯 ' if is_predicted else ''}{Config.CATEGORY_LABELS[cat]}
+                                {Config.CATEGORY_LABELS[cat]}
                             </span>
                             <span style="color: {bar_color}; font-weight: bold; font-size: 0.9rem;">{conf:.1%}</span>
                         </div>
@@ -1595,13 +1628,12 @@ def render_session_history():
 def main():
     """Main application entry point with responsive UI layout"""
     # Header with application title and description
-    st.markdown("<h1 class='main-header'>Khmer News Classifier</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='sub-header'>Advanced Text Classification for Khmer Language News Articles</p>", unsafe_allow_html=True)
-    
+    st.markdown("<h1 class='main-header'>Multi-Class Khmer News Classifier</h1>", unsafe_allow_html=True)
+
     # Create tabs for different sections
     classifier_tab, session_history_tab = st.tabs([
-        "🔍 **Classifier**", 
-        "📚 **Session History**"
+        "**Classifier**", 
+        "**Session History**"
     ])
     
     # Load the appropriate view based on selected tab
@@ -1613,7 +1645,7 @@ def main():
     
     # Footer
     st.markdown("---")
-    st.markdown("Developed by FYP Research Team | Khmer NLP Research Project", unsafe_allow_html=True)
+    st.markdown("Developed by Vengkim Seng & Darapong Rith | Multi-Class Khmer News Article Classification ", unsafe_allow_html=True)
 
 # Run the application
 if __name__ == "__main__":

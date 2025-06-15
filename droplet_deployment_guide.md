@@ -4,18 +4,19 @@
 
 ### **Recommended Droplet Specifications**
 
-| Component | Minimum | Recommended | Notes |
-|-----------|---------|-------------|-------|
-| **RAM** | 4GB | 8GB | FastText model needs ~3GB |
-| **CPU** | 2 vCPUs | 4 vCPUs | Better for concurrent users |
-| **Storage** | 50GB SSD | 100GB SSD | For models and logs |
-| **OS** | Ubuntu 22.04 | Ubuntu 22.04 LTS | Stable and supported |
+| Component   | Minimum      | Recommended      | Notes                       |
+| ----------- | ------------ | ---------------- | --------------------------- |
+| **RAM**     | 4GB          | 8GB              | FastText model needs ~3GB   |
+| **CPU**     | 2 vCPUs      | 4 vCPUs          | Better for concurrent users |
+| **Storage** | 50GB SSD     | 100GB SSD        | For models and logs         |
+| **OS**      | Ubuntu 22.04 | Ubuntu 22.04 LTS | Stable and supported        |
 
 **Estimated Cost**: $24-48/month (vs $0 Streamlit free but with limitations)
 
 ### **Step 1: Create and Configure Droplet**
 
 1. **Create Droplet**
+
    ```bash
    # On DigitalOcean dashboard:
    # - Choose Ubuntu 22.04 LTS
@@ -25,16 +26,17 @@
    ```
 
 2. **Initial Server Setup**
+
    ```bash
    # SSH into your droplet
    ssh root@your-droplet-ip
-   
+
    # Update system
    apt update && apt upgrade -y
-   
+
    # Install essential packages
    apt install -y python3 python3-pip python3-venv nginx supervisor git htop
-   
+
    # Create application user
    adduser --disabled-password --gecos "" khmerapp
    usermod -aG sudo khmerapp
@@ -43,27 +45,29 @@
 ### **Step 2: Application Setup**
 
 1. **Clone Repository**
+
    ```bash
    # Switch to app user
    su - khmerapp
-   
+
    # Clone your repository
    git clone https://github.com/your-username/your-repo.git
    cd your-repo
-   
+
    # Create virtual environment
    python3 -m venv venv
    source venv/bin/activate
-   
+
    # Install dependencies
    pip install -r requirements.txt
    ```
 
 2. **Download FastText Model**
+
    ```bash
    # Download the FastText model
    python download_fasttext_model.py
-   
+
    # Verify model exists
    ls -lh cc.km.300.bin
    ```
@@ -71,12 +75,14 @@
 ### **Step 3: Production Configuration**
 
 1. **Create Production Config**
+
    ```bash
    # Create config file
    nano production_config.py
    ```
 
 2. **Nginx Configuration**
+
    ```bash
    # Create nginx config
    sudo nano /etc/nginx/sites-available/khmer-classifier
@@ -91,16 +97,18 @@
 ### **Step 4: SSL and Domain Setup**
 
 1. **Domain Configuration**
+
    ```bash
    # Point your domain to droplet IP
    # Example: classifier.yourdomain.com -> your-droplet-ip
    ```
 
 2. **SSL Certificate**
+
    ```bash
    # Install certbot
    sudo apt install certbot python3-certbot-nginx
-   
+
    # Get SSL certificate
    sudo certbot --nginx -d classifier.yourdomain.com
    ```
@@ -108,6 +116,7 @@
 ### **Step 5: Monitoring and Maintenance**
 
 1. **Log Management**
+
    ```bash
    # Setup log rotation
    sudo nano /etc/logrotate.d/khmer-classifier
@@ -124,6 +133,7 @@
 ## 📁 **Configuration Files**
 
 ### **1. Production Config (`production_config.py`)**
+
 ```python
 import os
 import streamlit as st
@@ -159,11 +169,12 @@ ANALYTICS_DB_PATH = "/var/lib/khmer-classifier/analytics.db"
 ```
 
 ### **2. Nginx Configuration (`/etc/nginx/sites-available/khmer-classifier`)**
+
 ```nginx
 server {
     listen 80;
     server_name classifier.yourdomain.com;
-    
+
     # Redirect HTTP to HTTPS
     return 301 https://$server_name$request_uri;
 }
@@ -171,17 +182,17 @@ server {
 server {
     listen 443 ssl http2;
     server_name classifier.yourdomain.com;
-    
+
     # SSL Configuration (certbot will add this)
     ssl_certificate /etc/letsencrypt/live/classifier.yourdomain.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/classifier.yourdomain.com/privkey.pem;
-    
+
     # Security headers
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains";
-    
+
     # Proxy settings
     location / {
         proxy_pass http://127.0.0.1:8501;
@@ -193,23 +204,23 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
-        
+
         # Timeouts
         proxy_connect_timeout 60s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
-        
+
         # File upload size
         client_max_body_size 200M;
     }
-    
+
     # Static files (if any)
     location /static/ {
         alias /home/khmerapp/your-repo/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
-    
+
     # Health check
     location /health {
         access_log off;
@@ -220,6 +231,7 @@ server {
 ```
 
 ### **3. Supervisor Configuration (`/etc/supervisor/conf.d/khmer-classifier.conf`)**
+
 ```ini
 [program:khmer-classifier]
 command=/home/khmerapp/your-repo/venv/bin/streamlit run khmer_news_classifier_pro.py --server.port=8501 --server.address=127.0.0.1 --server.headless=true --server.enableCORS=false --server.enableXsrfProtection=true
@@ -245,6 +257,7 @@ stdout_logfile=/var/log/khmer-classifier/worker.log
 ```
 
 ### **4. Systemd Service (Alternative to Supervisor)**
+
 ```ini
 # /etc/systemd/system/khmer-classifier.service
 [Unit]
@@ -267,6 +280,7 @@ WantedBy=multi-user.target
 ```
 
 ### **5. Log Rotation (`/etc/logrotate.d/khmer-classifier`)**
+
 ```
 /var/log/khmer-classifier/*.log {
     daily
@@ -287,6 +301,7 @@ WantedBy=multi-user.target
 ## 🔧 **Deployment Script**
 
 ### **Automated Deployment Script (`deploy.sh`)**
+
 ```bash
 #!/bin/bash
 
@@ -422,6 +437,7 @@ log_info "   - Restart: sudo supervisorctl restart khmer-classifier"
 ## 🔍 **Monitoring and Maintenance**
 
 ### **Health Check Script (`health_check.sh`)**
+
 ```bash
 #!/bin/bash
 
@@ -441,6 +457,7 @@ fi
 ```
 
 ### **Backup Script (`backup.sh`)**
+
 ```bash
 #!/bin/bash
 
@@ -465,6 +482,7 @@ echo "Backup completed: $BACKUP_DIR"
 ```
 
 ### **Performance Monitoring**
+
 ```bash
 # Monitor system resources
 htop
@@ -483,13 +501,14 @@ sudo tail -f /var/log/nginx/access.log
 
 ## 💰 **Cost Comparison**
 
-| Platform | Monthly Cost | RAM | Storage | Bandwidth | Custom Domain | SSL |
-|----------|-------------|-----|---------|-----------|---------------|-----|
-| **Streamlit Free** | $0 | ~1GB | Limited | Limited | ❌ | ❌ |
-| **DigitalOcean 4GB** | $24 | 4GB | 80GB SSD | 4TB | ✅ | ✅ |
-| **DigitalOcean 8GB** | $48 | 8GB | 160GB SSD | 5TB | ✅ | ✅ |
+| Platform             | Monthly Cost | RAM  | Storage   | Bandwidth | Custom Domain | SSL |
+| -------------------- | ------------ | ---- | --------- | --------- | ------------- | --- |
+| **Streamlit Free**   | $0           | ~1GB | Limited   | Limited   | ❌            | ❌  |
+| **DigitalOcean 4GB** | $24          | 4GB  | 80GB SSD  | 4TB       | ✅            | ✅  |
+| **DigitalOcean 8GB** | $48          | 8GB  | 160GB SSD | 5TB       | ✅            | ✅  |
 
 **Benefits of Droplet Deployment:**
+
 - ✅ Full control over resources
 - ✅ Can handle large FastText model
 - ✅ Better performance for multiple users
