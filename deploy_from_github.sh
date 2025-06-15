@@ -5,9 +5,16 @@
 set -e
 
 # Configuration - Update these with your details
-GITHUB_REPO=${1:-"your_github_repo_url"}
+GITHUB_REPO_PATH=${1:-"your_github_repo_url"}
 SERVER_IP=${2:-"your_droplet_ip"}
 SSH_USER=${3:-"root"}
+
+# Construct full GitHub URL if only repo path is provided
+if [[ "$GITHUB_REPO_PATH" != https://* ]]; then
+    GITHUB_REPO="https://github.com/$GITHUB_REPO_PATH.git"
+else
+    GITHUB_REPO="$GITHUB_REPO_PATH"
+fi
 APP_NAME="khmer-news-classifier"
 APP_DIR="/opt/$APP_NAME"
 
