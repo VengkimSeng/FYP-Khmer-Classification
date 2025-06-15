@@ -16,11 +16,14 @@ License: Academic Research Use
 """
 
 import streamlit as st
+import joblib
 import numpy as np
+import pandas as pd
 import os
 import json
+import PyPDF2
 import time
-import unicodedata 
+import unicodedata
 import re
 import collections
 from typing import Dict, List, Tuple, Optional, Any
@@ -30,45 +33,6 @@ from enum import Enum
 import hashlib
 from datetime import datetime
 
-# Try to import optional dependencies with error handling
-try:
-    import joblib
-except ImportError:
-    st.error("❌ Missing required package: joblib")
-    st.info("Please install joblib: `pip install joblib`")
-    st.stop()
-
-try:
-    import PyPDF2
-except ImportError:
-    st.warning("⚠️ PyPDF2 not available. PDF upload functionality will be disabled.")
-    PyPDF2 = None
-
-# Import the FastText model downloader
-try:
-    from download_fasttext_model import download_fasttext_model, check_fasttext_model
-except ImportError:
-    # If download_fasttext_model.py is not available, provide fallback
-    def download_fasttext_model(base_dir=None, cleanup=True):
-        st.error("FastText model downloader not available. Please ensure download_fasttext_model.py is in the same directory.")
-        return False
-    
-    def check_fasttext_model(base_dir=None):
-        return os.path.exists(os.path.join(base_dir or ".", "cc.km.300.bin"))
-
-# Import cloud optimizer for Streamlit free tier
-try:
-    from streamlit_cloud_optimizer import (
-        load_cloud_optimized_fasttext,
-        get_text_features_cloud_optimized, 
-        show_cloud_optimization_info,
-        get_cloud_optimizer
-    )
-    CLOUD_OPTIMIZER_AVAILABLE = True
-except ImportError:
-    st.warning("⚠️ Cloud optimizer not available. Full FastText model will be used.")
-    CLOUD_OPTIMIZER_AVAILABLE = False
-
 
 
 # Configure page settings
@@ -76,7 +40,7 @@ st.set_page_config(
     page_title="Khmer News Classifier",
     page_icon="📰",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # Custom CSS for professional styling
@@ -336,17 +300,16 @@ st.markdown("""
 # Configuration and constants
 class Config:
     """Application configuration constants"""
-
-    MODEL_DIR = "./"
-    DEMO_MODEL_DIR = "./Demo_model/"
-    SVM_MODEL_PATH = os.path.join(DEMO_MODEL_DIR, "svm_model.joblib")
-    FASTTEXT_MODEL_PATH = os.path.join(MODEL_DIR, "cc.km.300.bin")
-    CONFIG_PATH = os.path.join(MODEL_DIR, "config.json")  # For model configuration
-
+    MODEL_DIR = "/root/FYP-Project/FYP-Feature-Extraction/FastText/FastText_Features/experiment_1_mean_pretrained"
+    SVM_MODEL_PATH = os.path.join(MODEL_DIR, "svm_model.joblib")
+    CONFIG_PATH = os.path.join(MODEL_DIR, "config.json")
+    ARTICLES_DIR = "/root/FYP-Project/articles"
+    PREPROCESSED_DIR = "/root/FYP-Project/Preprocess_articles"
+    
     CATEGORIES = ["economic", "environment", "health", "politic", "sport", "technology"]
     CATEGORY_LABELS = {
         "economic": "Economic & Finance",
-        "environment": "Environment & Nature",
+        "environment": "Environment & Nature", 
         "health": "Health & Medical",
         "politic": "Politics & Government",
         "sport": "Sports & Recreation",
@@ -487,251 +450,22 @@ class TextProcessor:
             return ' ។ '.join(sentences) if sentences else text
 
 class ModelManager:
-    """Manage model loading and caching with memory optimization"""
-    
-    # Class-level cache for models to ensure single loading
-    _model_cache = {}
-    _loading_in_progress = False
+    """Manage model loading and caching"""
     
     @staticmethod
-    @st.cache_resource(show_spinner=False)
+    @st.cache_resource
     def load_models():
-        """Load SVM model, FastText model, and configuration with memory optimization"""
-        # Prevent concurrent loading
-        if ModelManager._loading_in_progress:
-            st.info("⏳ Models are currently being loaded. Please wait...")
-            return None, None, None
-            
-        ModelManager._loading_in_progress = True
-        
+        """Load SVM model, FastText model, and configuration"""
         try:
-            # Check cache first
-            if "svm_model" in ModelManager._model_cache and "fasttext_model" in ModelManager._model_cache:
-                st.success("✅ Models loaded from memory cache")
-                return (
-                    ModelManager._model_cache["svm_model"], 
-                    ModelManager._model_cache["fasttext_model"],
-                    ModelManager._model_cache["config"]
-                )
-            
-            # Show loading progress
-            with st.spinner("🔄 Loading models into memory..."):
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                
-                # Step 1: Load SVM model (20% progress)
-                status_text.text("Loading SVM classifier...")
-                progress_bar.progress(0.1)
-                
-                if not os.path.exists(Config.SVM_MODEL_PATH):
-                    st.error(f"SVM model not found at: {Config.SVM_MODEL_PATH}")
-                    st.error("Please ensure the trained SVM model is available.")
-                    st.stop()
-                
-                svm_model = joblib.load(Config.SVM_MODEL_PATH)
-                ModelManager._model_cache["svm_model"] = svm_model
-                progress_bar.progress(0.2)
-                st.success("✅ SVM model loaded into memory")
-                
-                # Step 2: Check FastText model availability (40% progress)
-                status_text.text("Checking FastText model availability...")
-                progress_bar.progress(0.3)
-                
-                if not check_fasttext_model(Config.MODEL_DIR):
-                    st.warning("⚠️ FastText model not found. Starting download...")
-                    
-                    # Download with progress tracking
-                    status_text.text("Downloading FastText model...")
-                    st.info("📥 Downloading FastText Khmer model (cc.km.300.bin)")
-                    st.info("⏳ This is a one-time download of ~2.8GB. Please be patient...")
-                    
-                    download_success = download_fasttext_model(
-                        base_dir=Config.MODEL_DIR,
-                        cleanup=True
-                    )
-                    
-                    if not download_success:
-                        st.error("❌ Failed to download FastText model. Please check your internet connection and try again.")
-                        ModelManager._loading_in_progress = False
-                        st.stop()
-                    
-                    st.success("🎉 FastText model downloaded successfully!")
-                
-                progress_bar.progress(0.4)
-                
-                # Step 3: Load FastText model with cloud optimization (80% progress)
-                status_text.text("Loading FastText model (cloud optimized)...")
-                progress_bar.progress(0.5)
-                
-                if CLOUD_OPTIMIZER_AVAILABLE:
-                    fasttext_result = load_cloud_optimized_fasttext()
-                    ModelManager._model_cache["fasttext_model"] = fasttext_result
-                    progress_bar.progress(0.8)
-                    
-                    if fasttext_result['type'] != 'none':
-                        st.success(f"✅ FastText model loaded ({fasttext_result['type']} mode)")
-                    else:
-                        st.info("💡 Continuing with SVM-only classification")
-                else:
-                    # Fallback to original method for local development
-                    fasttext_model = ModelManager._load_fasttext_model_optimized()
-                    if fasttext_model is not None:
-                        ModelManager._model_cache["fasttext_model"] = {'type': 'full', 'model': fasttext_model}
-                        progress_bar.progress(0.8)
-                        st.success("✅ FastText model loaded into memory")
-                    else:
-                        st.info("💡 Continuing with SVM-only classification")
-                        ModelManager._model_cache["fasttext_model"] = {'type': 'none', 'model': None}
-                
-                # Step 4: Load configuration (100% progress)
-                status_text.text("Loading configuration...")
-                progress_bar.progress(0.9)
-                
-                config = ModelManager._get_or_create_config()
-                ModelManager._model_cache["config"] = config
-                
-                progress_bar.progress(1.0)
-                status_text.text("✅ All models loaded successfully!")
-                
-                # Memory usage info
-                ModelManager._show_memory_usage()
-                
-                return svm_model, fasttext_model, config
-            
+            svm_model = joblib.load(Config.SVM_MODEL_PATH)
+            with open(Config.CONFIG_PATH, "r") as f:
+                config = json.load(f)
+            from gensim.models.fasttext import load_facebook_model
+            fasttext_model = load_facebook_model(config["model_path"])
+            return svm_model, fasttext_model, config
         except Exception as e:
             st.error(f"Error loading models: {e}")
-            ModelManager._loading_in_progress = False
             st.stop()
-        finally:
-            ModelManager._loading_in_progress = False
-    
-    @staticmethod
-    def _load_fasttext_model_optimized():
-        """Optimized FastText model loading with multiple fallback methods"""
-        try:
-            # Method 1: Try gensim first (most memory efficient)
-            try:
-                from gensim.models.fasttext import load_facebook_model
-                st.info("🔄 Loading FastText model using gensim (memory optimized)...")
-                fasttext_model = load_facebook_model(Config.FASTTEXT_MODEL_PATH)
-                st.success("✅ FastText model loaded with gensim")
-                return fasttext_model
-                
-            except ImportError as gensim_error:
-                if "triu" in str(gensim_error) or "scipy" in str(gensim_error):
-                    st.warning(f"⚠️ Gensim compatibility issue: {gensim_error}")
-                    st.info("🔄 Trying alternative FastText loading method...")
-                else:
-                    raise gensim_error
-            
-            # Method 2: Try fasttext library as fallback
-            try:
-                import fasttext
-                st.info("🔄 Loading FastText model using fasttext library...")
-                fasttext_model = fasttext.load_model(Config.FASTTEXT_MODEL_PATH)
-                st.success("✅ FastText model loaded with fasttext library")
-                return fasttext_model
-                
-            except ImportError:
-                st.error("❌ FastText library not available. Install with: pip install fasttext")
-                return None
-            except Exception as fasttext_error:
-                st.error(f"❌ FastText library loading failed: {fasttext_error}")
-                return None
-                
-        except Exception as e:
-            st.error(f"❌ Critical error loading FastText model: {e}")
-            st.error("The model file might be corrupted. Try deleting cc.km.300.bin and restart the application.")
-            
-            with st.expander("🔧 Troubleshooting Options", expanded=False):
-                st.markdown("""
-                **Option 1: Delete and re-download model**
-                ```bash
-                rm cc.km.300.bin
-                # Restart the application
-                ```
-                
-                **Option 2: Fix dependencies**
-                ```bash
-                pip install --upgrade gensim>=4.2.0 scipy>=1.7.0 fasttext
-                ```
-                
-                **Option 3: Alternative model download**
-                ```bash
-                wget https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.km.300.bin.gz
-                gunzip cc.km.300.bin.gz
-                ```
-                """)
-            
-            return None
-    
-    @staticmethod
-    def _show_memory_usage():
-        """Display memory usage information"""
-        try:
-            import psutil
-            process = psutil.Process()
-            memory_info = process.memory_info()
-            memory_mb = memory_info.rss / 1024 / 1024
-            
-            st.info(f"� Current memory usage: {memory_mb:.1f} MB")
-            
-            if memory_mb > 1000:  # More than 1GB
-                st.info("📊 Large model loaded - this is normal for FastText embeddings")
-            
-        except ImportError:
-            st.info("💾 Memory monitoring unavailable (install psutil for memory stats)")
-        except Exception as e:
-            # Silently handle memory monitoring errors
-            pass
-    
-    @staticmethod
-    def clear_model_cache():
-        """Clear model cache to free memory"""
-        ModelManager._model_cache.clear()
-        st.cache_resource.clear()
-        st.success("🗑️ Model cache cleared")
-    
-    @staticmethod
-    def get_model_info():
-        """Get information about loaded models"""
-        info = {
-            "svm_loaded": "svm_model" in ModelManager._model_cache,
-            "fasttext_loaded": "fasttext_model" in ModelManager._model_cache,
-            "config_loaded": "config" in ModelManager._model_cache,
-            "cache_size": len(ModelManager._model_cache)
-        }
-        return info
-    
-    @staticmethod
-    def _get_or_create_config():
-        """Get existing configuration or create default one"""
-        try:
-            if os.path.exists(Config.CONFIG_PATH):
-                with open(Config.CONFIG_PATH, "r") as f:
-                    config = json.load(f)
-            else:
-                # Create default configuration
-                config = {
-                    "model_path": Config.FASTTEXT_MODEL_PATH,
-                    "embedding_method": "mean",
-                    "model_version": "2.0.0",
-                    "last_updated": datetime.now().isoformat()
-                }
-                # Save default configuration
-                with open(Config.CONFIG_PATH, "w") as f:
-                    json.dump(config, f, indent=2)
-                st.info("📝 Created default configuration file")
-            
-            return config
-            
-        except Exception as e:
-            # Return minimal working configuration
-            st.warning(f"⚠️ Could not load/create config file: {e}")
-            return {
-                "model_path": Config.FASTTEXT_MODEL_PATH,
-                "embedding_method": "mean"
-            }
 
 class AnalyticsEngine:
     """Advanced analytics and visualization engine"""
@@ -785,34 +519,10 @@ class ClassificationEngine:
     
     def get_sentence_embedding(self, segmented_text: str) -> np.ndarray:
         """Generate sentence embedding from segmented text"""
-        if self.fasttext_model is None:
-            # Fallback to simple TF-IDF-like representation
-            st.warning("⚠️ FastText model not available. Using fallback embedding method.")
-            words = segmented_text.strip().split()
-            if not words:
-                return np.zeros(300)
-            # Simple hash-based embedding as fallback
-            import hashlib
-            embedding = np.zeros(300)
-            for i, word in enumerate(words):
-                word_hash = int(hashlib.md5(word.encode('utf-8')).hexdigest(), 16)
-                idx = word_hash % 300
-                embedding[idx] += 1.0
-            # Normalize
-            norm = np.linalg.norm(embedding)
-            if norm > 0:
-                embedding = embedding / norm
-            return embedding
-            
         words = segmented_text.strip().split()
         if not words:
             return np.zeros(300)
         
-        # Use cloud-optimized embedding extraction if available
-        if CLOUD_OPTIMIZER_AVAILABLE and isinstance(self.fasttext_model, dict):
-            return get_text_features_cloud_optimized(segmented_text, self.fasttext_model)
-        
-        # Original method for backward compatibility
         word_vecs = []
         for word in words:
             try:
@@ -901,45 +611,27 @@ class ClassificationEngine:
         
         return confidence_dict
 
-# Initialize session state for the application
-def initialize_app():
-    """Initialize the application state and load models"""
-    # Initialize session state
-    if 'classification_history' not in st.session_state:
-        st.session_state.classification_history = []
-    if 'model_performance' not in st.session_state:
-        st.session_state.model_performance = {}
-    if 'user_preferences' not in st.session_state:
-        st.session_state.user_preferences = {
-            'theme': 'light',
-            'language': 'en',
-            'show_advanced': False
-        }
-    
-    # Load models only once
-    if 'models_loaded' not in st.session_state:
-        try:
-            svm_model, fasttext_model, config = ModelManager.load_models()
-            st.session_state.svm_model = svm_model
-            st.session_state.fasttext_model = fasttext_model
-            st.session_state.config = config
-            st.session_state.classification_engine = ClassificationEngine(
-                svm_model, fasttext_model, config.get("embedding_method", "mean")
-            )
-            st.session_state.models_loaded = True
-        except Exception as e:
-            st.error(f"Failed to initialize models: {e}")
-            st.stop()
+# Initialize database on startup
+# DatabaseManager.init_database()
 
-# Call initialization
-initialize_app()
+# Load models and data
+svm_model, fasttext_model, config = ModelManager.load_models()
+classification_engine = ClassificationEngine(svm_model, fasttext_model, config.get("embedding_method", "mean"))
+
+# Initialize session state
+if 'classification_history' not in st.session_state:
+    st.session_state.classification_history = []
+if 'model_performance' not in st.session_state:
+    st.session_state.model_performance = {}
+if 'user_preferences' not in st.session_state:
+    st.session_state.user_preferences = {
+        'theme': 'light',
+        'language': 'en',
+        'show_advanced': False
+    }
 
 def extract_pdf_text(pdf_file):
     """Extract text from uploaded PDF file and format into proper sentences and paragraphs"""
-    if PyPDF2 is None:
-        st.error("❌ PDF processing is not available. PyPDF2 is not installed.")
-        return None
-        
     try:
         pdf_reader = PyPDF2.PdfReader(pdf_file)
         text = ""
@@ -1188,127 +880,125 @@ def render_single_analysis():
             st.markdown("#### PDF Document Upload")
             st.markdown("*Ideal for analyzing longer articles, research papers, or saved documents*")
             
-            if PyPDF2 is None:
-                st.error("❌ PDF upload is not available.")
-                st.info("To enable PDF upload, install PyPDF2: `pip install PyPDF2`")
-            else:
-                # Create an upload area with custom styling
-                uploaded_file = st.file_uploader(
-                    "📁 Choose your PDF file",
-                    type=["pdf"],
-                    help="Upload PDF files containing Khmer text. Maximum file size: 10MB",
-                    label_visibility="collapsed"
-                )
+            # Create an upload area with custom styling
+            uploaded_file = st.file_uploader(
+                "📁 Choose your PDF file",
+                type=["pdf"],
+                help="Upload PDF files containing Khmer text. Maximum file size: 10MB",
+                label_visibility="collapsed"
+            )
+            
+            if uploaded_file is not None:
+                # File info display
+                file_size = len(uploaded_file.getvalue()) / 1024  # KB
+                st.info(f"📄 **{uploaded_file.name}** ({file_size:.1f} KB)")
                 
-                if uploaded_file is not None:
-                    # File info display
-                    file_size = len(uploaded_file.getvalue()) / 1024  # KB
-                    st.info(f"📄 **{uploaded_file.name}** ({file_size:.1f} KB)")
+                # Progress bar for extraction
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                try:
+                    status_text.text("🔄 Extracting text from PDF...")
+                    progress_bar.progress(25)
                     
-                    # Progress bar for extraction
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
+                    extracted_text = extract_pdf_text(uploaded_file)
+                    progress_bar.progress(75)
                     
-                    try:
-                        status_text.text("🔄 Extracting text from PDF...")
-                        progress_bar.progress(25)
+                    if extracted_text:
+                        text_input = extracted_text
+                        progress_bar.progress(100)
+                        status_text.empty()
+                        progress_bar.empty()
                         
-                        extracted_text = extract_pdf_text(uploaded_file)
-                        progress_bar.progress(75)
+                        # Success notification
+                        st.success(f"✅ Successfully extracted {len(extracted_text):,} characters!")
                         
-                        if extracted_text:
-                            text_input = extracted_text
-                            progress_bar.progress(100)
-                            status_text.empty()
-                            progress_bar.empty()
-                            
-                            # Success notification
-                            st.success(f"✅ Successfully extracted {len(extracted_text):,} characters!")
-                            
-                            # PDF analysis results
-                            st.markdown("##### 📊 Document Analysis")
-                            pdf_col1, pdf_col2, pdf_col3 = st.columns(3)
-                            
-                            with pdf_col1:
-                                st.metric("📁 File Size", f"{file_size:.1f} KB")
-                            
-                            with pdf_col2:
-                                word_count = len(extracted_text.split())
-                                st.metric("🔤 Words", f"{word_count:,}")
+                        # PDF analysis results
+                        st.markdown("##### 📊 Document Analysis")
+                        
+                        # Create metrics layout
+                        pdf_col1, pdf_col2, pdf_col3 = st.columns(3)
+                        
+                        with pdf_col1:
+                            st.metric("📁 File Size", f"{file_size:.1f} KB")
+                        
+                        with pdf_col2:
+                            word_count = len(extracted_text.split())
+                            st.metric("🔤 Words", f"{word_count:,}")
 
-                            with pdf_col3:
-                                st.metric("📝 Characters", f"{len(extracted_text):,}")
+                        with pdf_col3:
+                            st.metric("📝 Characters", f"{len(extracted_text):,}")
+                        
+                        # Document preview with enhanced display
+                        with st.expander("📖 Document Preview", expanded=False):
+                            # Toggle for showing complete document
+                            show_complete = st.toggle("📄 Show Complete Document")
                             
-                            # Document preview with enhanced display
-                            with st.expander("📖 Document Preview", expanded=False):
-                                # Toggle for showing complete document
-                                show_complete = st.toggle("📄 Show Complete Document")
+                            if show_complete:
+                                # Show complete document in the same field
+                                st.markdown("**Complete Document Content:**")
+                                st.text_area(
+                                    "Full Document:",
+                                    extracted_text,
+                                    height=500,
+                                    disabled=True,
+                                    key="pdf_complete"
+                                )
+                            else:
+                                # Show preview only
+                                preview_length = min(1000, len(extracted_text))
+                                preview_text = extracted_text[:preview_length]
+                                if len(extracted_text) > preview_length:
+                                    preview_text += "\n\n... [Document continues - toggle above to see complete text]"
                                 
-                                if show_complete:
-                                    # Show complete document in the same field
-                                    st.markdown("**Complete Document Content:**")
-                                    st.text_area(
-                                        "Full Document:",
-                                        extracted_text,
-                                        height=500,
-                                        disabled=True,
-                                        key="pdf_complete"
-                                    )
-                                else:
-                                    # Show preview only
-                                    preview_length = min(1000, len(extracted_text))
-                                    preview_text = extracted_text[:preview_length]
-                                    if len(extracted_text) > preview_length:
-                                        preview_text += "\n\n... [Document continues - toggle above to see complete text]"
-                                    
-                                    st.markdown("**First 1000 characters:**")
-                                    st.text_area(
-                                        "Document Preview:",
-                                        preview_text,
-                                        height=500,
-                                        disabled=True,
-                                        key="pdf_preview"
-                                    )
-                                
-                                # Popup button for extracted text
-                                col1, col2 = st.columns([1, 1])
-                                with col1:
-                                    # Copy to clipboard button
-                                    if st.button("📋 Copy Text", type="secondary", use_container_width=True):
-                                        st.code(extracted_text[:500] + "..." if len(extracted_text) > 500 else extracted_text)
-                                        st.success("✅ Text ready to copy!")
-                                
-                                with col2:
-                                    # Download button
-                                    st.download_button(
-                                        label="💾 Download TXT",
-                                        data=extracted_text,
-                                        file_name=f"extracted_{uploaded_file.name}.txt",
-                                        mime="text/plain",
-                                        use_container_width=True
-                                    )
-                        else:
-                            progress_bar.empty()
-                            status_text.empty()
-                            st.error("❌ Failed to extract text from PDF. Please ensure the file contains readable text.")
+                                st.markdown("**First 1000 characters:**")
+                                st.text_area(
+                                    "Document Preview:",
+                                    preview_text,
+                                    height=500,
+                                    disabled=True,
+                                    key="pdf_preview"
+                                )
                             
-                    except Exception as e:
+                            # Popup button for extracted text
+                            col1, col2 = st.columns([1, 1])
+                            with col1:
+                                # Copy to clipboard button
+                                if st.button("📋 Copy Text", type="secondary", use_container_width=True):
+                                    st.code(extracted_text[:500] + "..." if len(extracted_text) > 500 else extracted_text)
+                                    st.success("✅ Text ready to copy!")
+                            
+                            with col2:
+                                # Download button
+                                st.download_button(
+                                    label="💾 Download TXT",
+                                    data=extracted_text,
+                                    file_name=f"extracted_{uploaded_file.name}.txt",
+                                    mime="text/plain",
+                                    use_container_width=True
+                                )
+                    else:
                         progress_bar.empty()
                         status_text.empty()
-                        st.error(f"❌ Error processing PDF: {str(e)}")
-                
-                else:
-                    # Show upload instructions when no file is selected
-                    st.markdown("""
-                    <div style="
-                        border: 2px dashed #cccccc;
-                        border-radius: 10px;
-                        padding: 2rem;
-                        text-align: center;
-                        background-color: #f9f9f9;
-                        margin: 1rem 0;
-                    ">
-                        <h4 style="color: #666;">📁 Upload Instructions</h4>
+                        st.error("❌ Failed to extract text from PDF. Please ensure the file contains readable text.")
+                        
+                except Exception as e:
+                    progress_bar.empty()
+                    status_text.empty()
+                    st.error(f"❌ Error processing PDF: {str(e)}")
+            
+            else:
+                # Show upload instructions when no file is selected
+                st.markdown("""
+                <div style="
+                    border: 2px dashed #cccccc;
+                    border-radius: 10px;
+                    padding: 2rem;
+                    text-align: center;
+                    background-color: #f9f9f9;
+                    margin: 1rem 0;
+                ">
+                    <h4 style="color: #666;">📁 Upload Instructions</h4>
                     <p style="color: #888; margin: 0.5rem 0;">
                         • Supported format: PDF files only<br>
                         • Maximum file size: 10MB<br>
@@ -1323,7 +1013,7 @@ def render_single_analysis():
             if st.button("🚀 Analyze Text", type="primary", use_container_width=True):
                 # Store result in session state to display in output column
                 with st.spinner("Analyzing..."):
-                    result = st.session_state.classification_engine.classify_text(text_input)
+                    result = classification_engine.classify_text(text_input)
                     st.session_state.classification_history.append(result)
                     st.session_state.current_result = result
                     
@@ -1838,7 +1528,7 @@ def render_session_history():
                 
                 if st.button(f"🔄 Re-analyze", key=f"reanalyze_{result.prediction_id}", use_container_width=True, type="secondary"):
                     with st.spinner("Re-analyzing..."):
-                        new_result = st.session_state.classification_engine.classify_text(result.input_text)
+                        new_result = classification_engine.classify_text(result.input_text)
                         st.session_state.classification_history.append(new_result)
                         st.session_state.current_result = new_result
                     st.success("✅ Re-analyzed! Check results in Classifier tab.")
@@ -1907,48 +1597,6 @@ def main():
     # Header with application title and description
     st.markdown("<h1 class='main-header'>Khmer News Classifier</h1>", unsafe_allow_html=True)
     st.markdown("<p class='sub-header'>Advanced Text Classification for Khmer Language News Articles</p>", unsafe_allow_html=True)
-    
-    # Sidebar for advanced options and memory management
-    with st.sidebar:
-        st.markdown("### ⚙️ System Controls")
-        
-        # Cloud optimization info
-        if CLOUD_OPTIMIZER_AVAILABLE:
-            show_cloud_optimization_info()
-        
-        # Model information
-        model_info = ModelManager.get_model_info()
-        st.markdown("#### 🧠 Model Status")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("SVM", "✅" if model_info["svm_loaded"] else "❌")
-        with col2:
-            st.metric("FastText", "✅" if model_info["fasttext_loaded"] else "❌")
-        
-        # Memory management
-        st.markdown("#### 💾 Memory Management")
-        
-        if st.button("🗑️ Clear Model Cache", help="Clear models from memory to free up space"):
-            ModelManager.clear_model_cache()
-            st.experimental_rerun()
-        
-        if st.button("📊 Show Memory Usage", help="Display current memory usage"):
-            ModelManager._show_memory_usage()
-        
-        # Advanced options
-        with st.expander("🔧 Advanced Options"):
-            st.markdown("""
-            **Model Loading Options:**
-            - Models are cached in memory for faster processing
-            - Clear cache if experiencing memory issues
-            - FastText model uses ~2.8GB of RAM when loaded
-            
-            **Performance Tips:**
-            - Keep models in memory for best performance
-            - Use batch processing for multiple texts
-            - Monitor memory usage on resource-constrained systems
-            """)
     
     # Create tabs for different sections
     classifier_tab, session_history_tab = st.tabs([
