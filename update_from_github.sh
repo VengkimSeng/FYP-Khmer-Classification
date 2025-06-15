@@ -1,12 +1,21 @@
 #!/bin/bash
 # Update Khmer News Classifier from GitHub
-# Usage: ./update_from_github.sh [server_ip] [ssh_user]
+# Usage: ./update_from_github.sh [github_repo] [server_ip] [ssh_user]
 
 set -e
 
 # Configuration
-SERVER_IP=${1:-"your_droplet_ip"}
-SSH_USER=${2:-"root"}
+GITHUB_REPO_PATH=${1:-"your_github_repo_url"}
+SERVER_IP=${2:-"your_droplet_ip"}
+SSH_USER=${3:-"root"}
+
+# Construct full GitHub URL if only repo path is provided
+if [[ "$GITHUB_REPO_PATH" != https://* ]]; then
+    GITHUB_REPO="https://github.com/$GITHUB_REPO_PATH.git"
+else
+    GITHUB_REPO="$GITHUB_REPO_PATH"
+fi
+
 APP_DIR="/opt/khmer-news-classifier"
 
 # Colors for output
@@ -45,7 +54,8 @@ run_remote() {
     ssh -o StrictHostKeyChecking=no $SSH_USER@$SERVER_IP "$1"
 }
 
-log_info "Updating application from GitHub on $SERVER_IP..."
+log_info "Updating application from GitHub repository: $GITHUB_REPO"
+log_info "Target server: $SERVER_IP"
 
 # Check if app directory exists
 if ! run_remote "[ -d $APP_DIR ]"; then

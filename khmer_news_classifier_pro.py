@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Khmer News Classification System
-===============================
+Khmer News Classification System (8GB RAM Optimized)
+=====================================================
 Advanced Text Classification Platform for Khmer Language News Articles
 
 This application provides a comprehensive Natural Language Processing solution
@@ -9,9 +9,14 @@ for automated categorization of Khmer news articles using state-of-the-art
 machine learning techniques including FastText embeddings and Support Vector
 Machine classification.
 
+Optimized for systems with 8GB+ RAM with:
+- Models loaded at startup for instant classification
+- Word embedding caching for improved performance
+- Memory management optimizations
+
 Author: FYP Research Team
-Version: 2.0.0
-Date: May 31, 2025
+Version: 2.0.0 (8GB RAM Optimized)
+Date: June 15, 2025
 License: Academic Research Use
 """
 
@@ -28,10 +33,15 @@ import re
 import collections
 from typing import Dict, List, Tuple, Optional, Any
 import logging
+import hashlib
 from dataclasses import dataclass
 from enum import Enum
-import hashlib
 from datetime import datetime
+import gc  # For memory management with 8GB RAM
+
+# Configure memory optimization for 8GB RAM
+os.environ['PYTHONHASHSEED'] = '0'
+gc.set_threshold(700, 10, 10)  # Optimize garbage collection
 
 
 
@@ -505,18 +515,45 @@ class ModelManager:
     """Manage model loading and caching"""
     
     @staticmethod
-    @st.cache_resource
+    @st.cache_resource(show_spinner="Loading models...")
     def load_models():
         """Load SVM model, FastText model, and configuration"""
         try:
+            # Display loading progress
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            # Load SVM model
+            status_text.text("Loading SVM classification model...")
+            progress_bar.progress(25)
             svm_model = joblib.load(Config.SVM_MODEL_PATH)
+            
+            # Load configuration
+            status_text.text("Loading configuration...")
+            progress_bar.progress(50)
             with open(Config.CONFIG_PATH, "r") as f:
                 config = json.load(f)
+            
+            # Load FastText model (this takes the most time)
+            status_text.text("Loading FastText embeddings (this may take a moment)...")
+            progress_bar.progress(75)
             from gensim.models.fasttext import load_facebook_model
             fasttext_model = load_facebook_model(config["model_path"])
+            
+            # Complete
+            status_text.text("Models loaded successfully!")
+            progress_bar.progress(100)
+            
+            # Clear progress indicators
+            import time
+            time.sleep(1)
+            progress_bar.empty()
+            status_text.empty()
+            
             return svm_model, fasttext_model, config
         except Exception as e:
             st.error(f"Error loading models: {e}")
+            st.error(f"Make sure the FastText model file exists at: {config.get('model_path', 'cc.km.300.bin')}")
             st.stop()
 
 class AnalyticsEngine:
@@ -568,9 +605,13 @@ class ClassificationEngine:
         self.svm_model = svm_model
         self.fasttext_model = fasttext_model
         self.embedding_method = embedding_method
+        
+        # Cache for word embeddings to improve performance with 8GB RAM
+        self._word_embedding_cache = {}
+        self._cache_max_size = 10000  # Cache up to 10k word embeddings
     
     def get_sentence_embedding(self, segmented_text: str) -> np.ndarray:
-        """Generate sentence embedding from segmented text"""
+        """Generate sentence embedding from segmented text with caching for better performance"""
         words = segmented_text.strip().split()
         if not words:
             return np.zeros(300)
@@ -578,14 +619,24 @@ class ClassificationEngine:
         word_vecs = []
         for word in words:
             try:
-                if hasattr(self.fasttext_model, 'get_word_vector'):
-                    vec = self.fasttext_model.get_word_vector(word)
-                elif hasattr(self.fasttext_model, 'wv') and word in self.fasttext_model.wv:
-                    vec = self.fasttext_model.wv[word]
-                elif hasattr(self.fasttext_model, 'get_vector'):
-                    vec = self.fasttext_model.get_vector(word)
+                # Check cache first for better performance
+                if word in self._word_embedding_cache:
+                    vec = self._word_embedding_cache[word]
                 else:
-                    vec = self.fasttext_model[word]
+                    # Get word vector from FastText model
+                    if hasattr(self.fasttext_model, 'get_word_vector'):
+                        vec = self.fasttext_model.get_word_vector(word)
+                    elif hasattr(self.fasttext_model, 'wv') and word in self.fasttext_model.wv:
+                        vec = self.fasttext_model.wv[word]
+                    elif hasattr(self.fasttext_model, 'get_vector'):
+                        vec = self.fasttext_model.get_vector(word)
+                    else:
+                        vec = self.fasttext_model[word]
+                    
+                    # Cache the embedding if we have space
+                    if len(self._word_embedding_cache) < self._cache_max_size:
+                        self._word_embedding_cache[word] = vec
+                
                 word_vecs.append((word, vec))
             except Exception:
                 continue
@@ -662,13 +713,37 @@ class ClassificationEngine:
                     confidence_dict[cat] = 0.05 / (len(Config.CATEGORIES) - 1)
         
         return confidence_dict
+    
+    def clear_cache(self):
+        """Clear the word embedding cache to free memory if needed"""
+        self._word_embedding_cache.clear()
+        gc.collect()
+    
+    def get_cache_info(self):
+        """Get information about the current cache status"""
+        return {
+            "cached_words": len(self._word_embedding_cache),
+            "cache_size_limit": self._cache_max_size,
+            "cache_usage": f"{len(self._word_embedding_cache)}/{self._cache_max_size}"
+        }
 
 # Initialize database on startup
 # DatabaseManager.init_database()
 
-# Load models and data
+# Load models and data at startup (8GB RAM version)
+st.info("🔄 Loading models at startup for optimal performance...")
 svm_model, fasttext_model, config = ModelManager.load_models()
 classification_engine = ClassificationEngine(svm_model, fasttext_model, config.get("embedding_method", "mean"))
+st.success("✅ All models loaded successfully! Ready for classification.")
+
+def get_classification_engine():
+    """Return the already loaded classification engine"""
+    global classification_engine
+    if classification_engine is None:
+        # This should not happen with startup loading, but handle gracefully
+        st.error("Classification engine not loaded. Please restart the application.")
+        st.stop()
+    return classification_engine
 
 # Initialize session state
 if 'classification_history' not in st.session_state:
@@ -1064,7 +1139,7 @@ def render_single_analysis():
             if st.button("Analyze Text", type="primary", use_container_width=True):
                 # Store result in session state to display in output column
                 with st.spinner("Analyzing..."):
-                    result = classification_engine.classify_text(text_input)
+                    result = get_classification_engine().classify_text(text_input)
                     st.session_state.classification_history.append(result)
                     st.session_state.current_result = result
                     
@@ -1562,7 +1637,7 @@ def render_session_history():
                 
                 if st.button(f"Re-analyze", key=f"reanalyze_{result.prediction_id}", use_container_width=True, type="secondary"):
                     with st.spinner("Re-analyzing..."):
-                        new_result = classification_engine.classify_text(result.input_text)
+                        new_result = get_classification_engine().classify_text(result.input_text)
                         st.session_state.classification_history.append(new_result)
                         st.session_state.current_result = new_result
                     st.success("Re-analyzed! Check results in Classifier tab.")
