@@ -1,12 +1,12 @@
 #!/bin/bash
 # Deploy Khmer News Classifier from GitHub to DigitalOcean Droplet
-# Usage: ./deploy_from_github.sh [server_ip] [github_repo_url] [ssh_user]
+# Usage: ./deploy_from_github.sh [github_repo] [server_ip] [ssh_user]
 
 set -e
 
 # Configuration - Update these with your details
-SERVER_IP=${1:-"your_droplet_ip"}
-GITHUB_REPO=${2:-"your_github_repo_url"}
+GITHUB_REPO=${1:-"your_github_repo_url"}
+SERVER_IP=${2:-"your_droplet_ip"}
 SSH_USER=${3:-"root"}
 APP_NAME="khmer-news-classifier"
 APP_DIR="/opt/$APP_NAME"
@@ -35,17 +35,17 @@ log_error() {
 }
 
 # Check if required parameters are provided
-if [ "$SERVER_IP" = "your_droplet_ip" ]; then
-    log_error "Please provide your droplet IP address and GitHub repository URL"
-    echo "Usage: ./deploy_from_github.sh [server_ip] [github_repo_url] [ssh_user]"
-    echo "Example: ./deploy_from_github.sh 192.168.1.100 https://github.com/username/khmer-news-classifier.git root"
+if [ "$GITHUB_REPO" = "your_github_repo_url" ]; then
+    log_error "Please provide your GitHub repository and droplet IP address"
+    echo "Usage: ./deploy_from_github.sh [github_repo] [server_ip] [ssh_user]"
+    echo "Example: ./deploy_from_github.sh username/khmer-news-classifier 192.168.1.100 root"
     exit 1
 fi
 
-if [ "$GITHUB_REPO" = "your_github_repo_url" ]; then
-    log_error "Please provide your GitHub repository URL"
-    echo "Usage: ./deploy_from_github.sh [server_ip] [github_repo_url] [ssh_user]"
-    echo "Example: ./deploy_from_github.sh 192.168.1.100 https://github.com/username/khmer-news-classifier.git root"
+if [ "$SERVER_IP" = "your_droplet_ip" ]; then
+    log_error "Please provide your droplet IP address"
+    echo "Usage: ./deploy_from_github.sh [github_repo] [server_ip] [ssh_user]"
+    echo "Example: ./deploy_from_github.sh username/khmer-news-classifier 192.168.1.100 root"
     exit 1
 fi
 
