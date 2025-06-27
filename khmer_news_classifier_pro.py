@@ -39,51 +39,18 @@ from enum import Enum
 from datetime import datetime
 import gc  # For memory management with 8GB RAM
 
-# Development and Hosting Configuration
-DEVELOPMENT_MODE = os.getenv('STREAMLIT_DEBUG', 'true').lower() == 'true'  # Automatically detect based on environment
-DEBUG_MODE = os.getenv('STREAMLIT_DEBUG', 'true').lower() == 'true'
-PRODUCTION_MODE = not DEVELOPMENT_MODE
-
 # Configure memory optimization for 8GB RAM
 os.environ['PYTHONHASHSEED'] = '0'
 gc.set_threshold(700, 10, 10)  # Optimize garbage collection
 
-# Development mode configurations
-if DEVELOPMENT_MODE:
-    # Enable file watching for auto-reload during development
-    os.environ['STREAMLIT_SERVER_RUN_ON_SAVE'] = 'true'
-    os.environ['STREAMLIT_SERVER_HEADLESS'] = 'false'
-    os.environ['STREAMLIT_BROWSER_GATHER_USAGE_STATS'] = 'false'
-    os.environ['STREAMLIT_GLOBAL_LOG_LEVEL'] = 'info'
-    
-    # Set development server options (only client-side options can be set dynamically)
-    if DEBUG_MODE:
-        logging.basicConfig(level=logging.INFO)
-        # Note: server.enableCORS and server.enableXsrfProtection must be set via command line
-        # or config.toml, not dynamically in code
-        try:
-            st.set_option('client.showErrorDetails', True)
-            st.set_option('client.toolbarMode', 'developer')
-        except Exception as e:
-            # Ignore if options can't be set (may be locked in production)
-            if DEBUG_MODE:
-                print(f"Note: Some Streamlit options couldn't be set dynamically: {e}")
-
 
 
 # Configure page settings
-page_title = "KH News Multi-Class Classifier"
-
 st.set_page_config(
-    page_title=page_title,
-    page_icon="📰",
+    page_title="KH News Multi-ClassClassifier",
+    page_icon="�",
     layout="wide",
     initial_sidebar_state="collapsed",
-    menu_items={
-        'Get Help': 'https://github.com/your-repo/issues',
-        'Report a bug': 'https://github.com/your-repo/issues',
-        'About': "Khmer News Classifier v2.0.0"
-    }
 )
 
 # Custom CSS for professional styling
@@ -764,24 +731,10 @@ class ClassificationEngine:
 # DatabaseManager.init_database()
 
 # Load models and data at startup (8GB RAM version)
-startup_msg = "🔄 Loading models at startup for optimal performance..."
-
-startup_placeholder = st.empty()
-startup_placeholder.info(startup_msg)
-
-try:
-    svm_model, fasttext_model, config = ModelManager.load_models()
-    classification_engine = ClassificationEngine(svm_model, fasttext_model, config.get("embedding_method", "mean"))
-    
-    success_msg = "✅ All models loaded successfully! Ready for classification."
-    
-    startup_placeholder.success(success_msg)
-
-except Exception as e:
-    startup_placeholder.error(f"❌ Error loading models: {str(e)}")
-    st.exception(e)  # Show error details
-    st.info("💡 Please check the console for detailed error information.")
-    st.stop()
+st.info("🔄 Loading models at startup for optimal performance...")
+svm_model, fasttext_model, config = ModelManager.load_models()
+classification_engine = ClassificationEngine(svm_model, fasttext_model, config.get("embedding_method", "mean"))
+st.success("✅ All models loaded successfully! Ready for classification.")
 
 def get_classification_engine():
     """Return the already loaded classification engine"""
@@ -1750,78 +1703,8 @@ def render_session_history():
 
 def main():
     """Main application entry point with responsive UI layout"""
-    
-    # Add theme switcher in sidebar
-    with st.sidebar:
-        st.markdown("### ⚙️ Settings")
-        
-        theme_choice = st.selectbox(
-            "🎨 Choose Theme",
-            ["Light", "Dark"],
-            index=0,
-            help="Select your preferred theme"
-        )
-        
-        # Apply theme styling
-        if theme_choice == "Dark":
-            st.markdown("""
-            <style>
-            .stApp {
-                background-color: #0E1117;
-                color: #FAFAFA;
-            }
-            .main-header {
-                color: #FAFAFA !important;
-            }
-            .stSelectbox label, .stTextArea label, .stFileUploader label {
-                color: #FAFAFA !important;
-            }
-            .stMarkdown {
-                color: #FAFAFA;
-            }
-            .stTabs [data-baseweb="tab-list"] {
-                background-color: #262730;
-            }
-            .stTabs [data-baseweb="tab"] {
-                color: #FAFAFA;
-            }
-            .stSidebar {
-                background-color: #262730;
-            }
-            .stSidebar .stMarkdown {
-                color: #FAFAFA;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown("""
-            <style>
-            .stApp {
-                background-color: #FFFFFF;
-                color: #262730;
-            }
-            .main-header {
-                color: #262730 !important;
-            }
-            .stSelectbox label, .stTextArea label, .stFileUploader label {
-                color: #262730 !important;
-            }
-            .stTabs [data-baseweb="tab-list"] {
-                background-color: #F0F2F6;
-            }
-            .stTabs [data-baseweb="tab"] {
-                color: #262730;
-            }
-            .stSidebar {
-                background-color: #F0F2F6;
-            }
-            </style>
-            """, unsafe_allow_html=True)
-    
     # Header with application title and description
-    header_title = "Multi-Class Khmer News Classifier"
-    
-    st.markdown(f"<h1 class='main-header'>{header_title}</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 class='main-header'>Multi-Class Khmer News Classifier</h1>", unsafe_allow_html=True)
 
     # Create tabs for different sections
     classifier_tab, session_history_tab = st.tabs([
