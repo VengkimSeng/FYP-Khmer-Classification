@@ -73,8 +73,6 @@ if DEVELOPMENT_MODE:
 
 # Configure page settings
 page_title = "KH News Multi-Class Classifier"
-if DEVELOPMENT_MODE:
-    page_title += " [DEV MODE]"
 
 st.set_page_config(
     page_title=page_title,
@@ -84,7 +82,7 @@ st.set_page_config(
     menu_items={
         'Get Help': 'https://github.com/your-repo/issues',
         'Report a bug': 'https://github.com/your-repo/issues',
-        'About': f"Khmer News Classifier v2.0.0 {'(Development Mode)' if DEVELOPMENT_MODE else ''}"
+        'About': "Khmer News Classifier v2.0.0"
     }
 )
 
@@ -767,8 +765,6 @@ class ClassificationEngine:
 
 # Load models and data at startup (8GB RAM version)
 startup_msg = "🔄 Loading models at startup for optimal performance..."
-if DEVELOPMENT_MODE:
-    startup_msg += " [DEV MODE]"
 
 startup_placeholder = st.empty()
 startup_placeholder.info(startup_msg)
@@ -778,25 +774,13 @@ try:
     classification_engine = ClassificationEngine(svm_model, fasttext_model, config.get("embedding_method", "mean"))
     
     success_msg = "✅ All models loaded successfully! Ready for classification."
-    if DEVELOPMENT_MODE:
-        success_msg += " 🚀 Development mode active - auto-reload enabled."
     
     startup_placeholder.success(success_msg)
-    
-    # In development mode, show additional model info
-    if DEVELOPMENT_MODE and DEBUG_MODE:
-        with st.expander("🔍 Model Loading Details", expanded=False):
-            st.write(f"**SVM Model:** {type(svm_model).__name__}")
-            st.write(f"**FastText Model:** {type(fasttext_model).__name__}")
-            st.write(f"**Embedding Method:** {config.get('embedding_method', 'mean')}")
-            st.write(f"**Model Directory:** {Config.MODEL_DIR}")
-            st.write(f"**Config:** {json.dumps(config, indent=2)}")
 
 except Exception as e:
     startup_placeholder.error(f"❌ Error loading models: {str(e)}")
-    if DEVELOPMENT_MODE:
-        st.exception(e)  # Show full traceback in dev mode
-        st.info("💡 Development Mode: Check the console for detailed error information.")
+    st.exception(e)  # Show error details
+    st.info("💡 Please check the console for detailed error information.")
     st.stop()
 
 def get_classification_engine():
@@ -1771,39 +1755,6 @@ def main():
     with st.sidebar:
         st.markdown("### ⚙️ Settings")
         
-        # Development mode information
-        if DEVELOPMENT_MODE:
-            st.markdown("### 🚀 Development Mode")
-            st.success("Auto-reload: ON")
-            st.info(f"Debug mode: {'ON' if DEBUG_MODE else 'OFF'}")
-            
-            # System information for debugging
-            with st.expander("🔧 System Info"):
-                try:
-                    import psutil
-                    memory = psutil.virtual_memory()
-                    st.metric("RAM Usage", f"{memory.percent}%")
-                    st.metric("Available RAM", f"{memory.available / (1024**3):.1f} GB")
-                except ImportError:
-                    st.write("Install psutil for system monitoring")
-                
-                # Model cache info
-                if 'classification_engine' in globals():
-                    cache_info = classification_engine.get_cache_info()
-                    st.metric("Word Cache", cache_info["cache_usage"])
-            
-            # Quick actions for development
-            st.markdown("### 🛠️ Dev Tools")
-            if st.button("🧹 Clear Cache"):
-                st.cache_resource.clear()
-                if 'classification_engine' in globals():
-                    classification_engine.clear_cache()
-                st.success("Cache cleared!")
-                st.rerun()
-                
-            if st.button("🔄 Force Reload"):
-                st.rerun()
-        
         theme_choice = st.selectbox(
             "🎨 Choose Theme",
             ["Light", "Dark"],
@@ -1868,25 +1819,7 @@ def main():
             """, unsafe_allow_html=True)
     
     # Header with application title and description
-    if DEVELOPMENT_MODE:
-        st.markdown("""
-        <div style="
-            background: linear-gradient(90deg, #ff6b6b, #ffd93d);
-            color: white;
-            padding: 0.5rem;
-            border-radius: 8px;
-            text-align: center;
-            margin-bottom: 1rem;
-            font-weight: bold;
-            box-shadow: 0 2px 10px rgba(255,107,107,0.3);
-        ">
-            🚀 DEVELOPMENT MODE ACTIVE | Auto-reload enabled | Debug mode: ON
-        </div>
-        """, unsafe_allow_html=True)
-    
     header_title = "Multi-Class Khmer News Classifier"
-    if DEVELOPMENT_MODE:
-        header_title += " <span style='color: #ff6b6b; font-size: 0.7em;'>[DEV]</span>"
     
     st.markdown(f"<h1 class='main-header'>{header_title}</h1>", unsafe_allow_html=True)
 
