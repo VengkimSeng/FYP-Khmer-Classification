@@ -56,13 +56,18 @@ if DEVELOPMENT_MODE:
     os.environ['STREAMLIT_BROWSER_GATHER_USAGE_STATS'] = 'false'
     os.environ['STREAMLIT_GLOBAL_LOG_LEVEL'] = 'info'
     
-    # Set development server options
+    # Set development server options (only client-side options can be set dynamically)
     if DEBUG_MODE:
         logging.basicConfig(level=logging.INFO)
-        st.set_option('client.showErrorDetails', True)
-        st.set_option('client.toolbarMode', 'developer')
-        st.set_option('server.enableCORS', True)
-        st.set_option('server.enableXsrfProtection', False)
+        # Note: server.enableCORS and server.enableXsrfProtection must be set via command line
+        # or config.toml, not dynamically in code
+        try:
+            st.set_option('client.showErrorDetails', True)
+            st.set_option('client.toolbarMode', 'developer')
+        except Exception as e:
+            # Ignore if options can't be set (may be locked in production)
+            if DEBUG_MODE:
+                print(f"Note: Some Streamlit options couldn't be set dynamically: {e}")
 
 
 
