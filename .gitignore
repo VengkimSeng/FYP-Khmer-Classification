@@ -36,6 +36,16 @@ venv.bak/
 # Streamlit cache
 .streamlit/
 
+# SSL Certificate files (keep secure)
+*.key
+*.crt
+*.ca-bundle
+*.csr
+server_csr.txt
+server.key
+khnewsclassifier_tech.ca-bundle
+khnewsclassifier_tech.crt
+
 # Pytest cache
 .pytest_cache/
 
