@@ -1703,6 +1703,73 @@ def render_session_history():
 
 def main():
     """Main application entry point with responsive UI layout"""
+    
+    # Add theme switcher in sidebar
+    with st.sidebar:
+        st.markdown("### ⚙️ Settings")
+        theme_choice = st.selectbox(
+            "🎨 Choose Theme",
+            ["Light", "Dark"],
+            index=0,
+            help="Select your preferred theme"
+        )
+        
+        # Apply theme styling
+        if theme_choice == "Dark":
+            st.markdown("""
+            <style>
+            .stApp {
+                background-color: #0E1117;
+                color: #FAFAFA;
+            }
+            .main-header {
+                color: #FAFAFA !important;
+            }
+            .stSelectbox label, .stTextArea label, .stFileUploader label {
+                color: #FAFAFA !important;
+            }
+            .stMarkdown {
+                color: #FAFAFA;
+            }
+            .stTabs [data-baseweb="tab-list"] {
+                background-color: #262730;
+            }
+            .stTabs [data-baseweb="tab"] {
+                color: #FAFAFA;
+            }
+            .stSidebar {
+                background-color: #262730;
+            }
+            .stSidebar .stMarkdown {
+                color: #FAFAFA;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <style>
+            .stApp {
+                background-color: #FFFFFF;
+                color: #262730;
+            }
+            .main-header {
+                color: #262730 !important;
+            }
+            .stSelectbox label, .stTextArea label, .stFileUploader label {
+                color: #262730 !important;
+            }
+            .stTabs [data-baseweb="tab-list"] {
+                background-color: #F0F2F6;
+            }
+            .stTabs [data-baseweb="tab"] {
+                color: #262730;
+            }
+            .stSidebar {
+                background-color: #F0F2F6;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+    
     # Header with application title and description
     st.markdown("<h1 class='main-header'>Multi-Class Khmer News Classifier</h1>", unsafe_allow_html=True)
 
