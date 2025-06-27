@@ -36,16 +36,6 @@ venv.bak/
 # Streamlit cache
 .streamlit/
 
-# SSL Certificate files (keep secure)
-*.key
-*.crt
-*.ca-bundle
-*.csr
-server_csr.txt
-server.key
-khnewsclassifier_tech.ca-bundle
-khnewsclassifier_tech.crt
-
 # Pytest cache
 .pytest_cache/
 
@@ -74,3 +64,13 @@ Thumbs.db
 raw_articles/
 preprocessed_articles/
 cc.km.300.bin
+
+# SSL/TLS Certificate files - Upload directly to server, don't commit to GitHub
+*.crt
+*.ca-bundle
+*.key
+*_csr.txt
+server_csr.txt
+khnewsclassifier_tech.ca-bundle
+khnewsclassifier_tech.crt
+server.key
