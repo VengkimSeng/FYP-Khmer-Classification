@@ -131,7 +131,10 @@ Type=simple
 User=www-data
 WorkingDirectory=$APP_DIR
 Environment=PATH=$APP_DIR/venv/bin
-ExecStart=$APP_DIR/venv/bin/streamlit run khmer_news_classifier_pro.py --server.port=8501 --server.address=0.0.0.0 --server.headless=true
+Environment=STREAMLIT_SERVER_HEADLESS=false
+Environment=STREAMLIT_SERVER_RUN_ON_SAVE=true
+Environment=STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+ExecStart=$APP_DIR/venv/bin/streamlit run khmer_news_classifier_pro.py --server.port=8501 --server.address=0.0.0.0 --server.headless=false --server.runOnSave=true --server.allowRunOnSave=true
 Restart=always
 RestartSec=3
 
